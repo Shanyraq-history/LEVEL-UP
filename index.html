@@ -646,7 +646,7 @@ function shiftDate(s, n){ const d = parseD(s); d.setDate(d.getDate()+n); return 
 const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
 const firstName = n => String(n || '').trim().split(/\s+/)[0] || '';
 function deepMerge(t, p){ for (const k in p){ const v = p[k]; if (v && typeof v === 'object' && !Array.isArray(v)){ if (!t[k] || typeof t[k] !== 'object' || Array.isArray(t[k])) t[k] = {}; deepMerge(t[k], v); } else t[k] = v; } return t; }
-let toastT; function toast(msg){ const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 3200); }
+let toastT; function toast(msg, ms){ const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, ms || Math.max(3200, String(msg).length * 70)); }
 
 /* ---------- robot mascot (original drawing) ---------- */
 function bot(cls = ''){
@@ -748,6 +748,22 @@ const LOGIN_RE = /^[a-z0-9._-]{3,32}$/;
 const loginEmail = l => `${l}@${EMAIL_DOMAIN}`;
 const safeName = n => String(n || 'file').replace(/[^A-Za-z0-9._-]+/g, '_').slice(-80);
 const msOf = t => t ? new Date(t).getTime() : 0;
+const MAX_UP = 50 * 1024 * 1024;
+const mb = n => (n / 1048576).toFixed(1).replace('.0', '') + ' МБ';
+async function upMat(path, fi, btn){
+  if (fi.size > MAX_UP) throw new Error(`«${fi.name}» тым үлкен (${mb(fi.size)}). Шек — 50 МБ. Кітапты сығып (ilovepdf.com → Compress) қайта жүктеңіз немесе Google Drive сілтемесін «Сілтеме» жолына қойыңыз.`);
+  const old = btn && btn.textContent; if (btn) btn.textContent = `Жүктелуде… ${mb(fi.size)}`;
+  try {
+    const up = await sb.storage.from('materials').upload(path, fi, { contentType: fi.type || undefined });
+    if (up.error){
+      const m = String(up.error.message || up.error.error || up.error);
+      if (/size|large|413/i.test(m)) throw new Error(`«${fi.name}» тым үлкен (${mb(fi.size)}). Supabase шегі — 50 МБ.`);
+      if (/security|policy|unauthor|403/i.test(m)) throw new Error('Файл жүктеуге рұқсат жоқ: тек куратор жүктей алады (storage саясатын тексеру керек).');
+      throw new Error('Файл жүктелмеді: ' + m);
+    }
+    return { path, name:fi.name };
+  } finally { if (btn) btn.textContent = old; }
+}
 async function q(p){ const { data, error } = await p; if (error) throw error; return data; }
 S.urls = {}; S.urlsAt = Date.now(); S.authMode = 'login';
 
@@ -1778,8 +1794,8 @@ document.addEventListener('submit', async e => {
     const btns = f.querySelectorAll('[type=submit]'); btns.forEach(b => b.disabled = true);
     const files = [];
     for (const fi of $('#tFiles').files){
-      try { const path = `tasks/${Date.now()}-${safeName(fi.name)}`; const up = await sb.storage.from('materials').upload(path, fi, { contentType: fi.type || undefined }); if (up.error) throw up.error; files.push({ path, name:fi.name }); }
-      catch (err){ console.warn(err); toast('Файл жүктелмеді: ' + fi.name); }
+      try { files.push(await upMat(`tasks/${Date.now()}-${safeName(fi.name)}`, fi, btns[btns.length - 1])); }
+      catch (err){ console.warn(err); toast(err.message); await new Promise(r => setTimeout(r, 2500)); }
     }
     btns.forEach(b => b.disabled = false);
     const row = { title:data.title, descr:data.desc, subject:data.subject || null, section:data.section, date:data.date, deadline:dl.toISOString(), attachments:[...links, ...files] };
@@ -1793,8 +1809,8 @@ document.addEventListener('submit', async e => {
     const btn = f.querySelector('[type=submit]'); btn.disabled = true;
     let file = null; const fi = $('#mFile').files[0];
     if (fi){
-      try { const path = `${S.subject}/${Date.now()}-${safeName(fi.name)}`; const up = await sb.storage.from('materials').upload(path, fi, { contentType: fi.type || undefined }); if (up.error) throw up.error; file = { path, name:fi.name }; }
-      catch { toast('Файл жүктелмеді'); btn.disabled = false; return; }
+      try { file = await upMat(`${S.subject}/${Date.now()}-${safeName(fi.name)}`, fi, btn); }
+      catch (err){ console.warn(err); toast(err.message, 9000); btn.disabled = false; return; }
     }
     await cur(() => q(sb.from('materials').insert({ subject:S.subject, section:S.tab, title, descr:$('#mDesc').value.trim(), link:$('#mLink').value.trim(), file_path:file ? file.path : null, file_name:file ? file.name : null })), 'Қосылды');
     f.reset(); $('#mFileName').textContent = ''; btn.disabled = false; return;
@@ -1806,7 +1822,7 @@ document.addEventListener('submit', async e => {
     if (!items.length && !fi){ toast('Пункттерді жазыңыз немесе PDF тіркеңіз'); return; }
     const btn = f.querySelector('[type=submit]'); btn.disabled = true;
     let file = null;
-    if (fi){ try { const path = `${S.subject}/${Date.now()}-${safeName(fi.name)}`; const up = await sb.storage.from('materials').upload(path, fi, { contentType: fi.type || undefined }); if (up.error) throw up.error; file = { path, name:fi.name }; } catch { toast('Файл жүктелмеді'); btn.disabled = false; return; } }
+    if (fi){ try { file = await upMat(`${S.subject}/${Date.now()}-${safeName(fi.name)}`, fi, btn); } catch (err){ console.warn(err); toast(err.message, 9000); btn.disabled = false; return; } }
     await cur(() => q(sb.from('checklists').insert({ subject:S.subject, section:S.tab, title:$('#cTitle').value.trim(), items, file_path:file ? file.path : null, file_name:file ? file.name : null })), 'Чек-лист жарияланды');
     f.reset(); $('#cFileName').textContent = ''; btn.disabled = false; return;
   }
