@@ -216,11 +216,17 @@ tr.open td{background:color-mix(in srgb,var(--accent) 10%,var(--surface))}
 @media (max-width:520px){ .greet .gb small{display:none} .greet .gb{max-width:150px} }
 .vmodal{position:fixed;inset:0;z-index:60;background:rgba(4,14,22,.78);display:grid;place-items:center;padding:max(12px,env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) max(12px,env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px))}
 .vmodal[hidden]{display:none}
-.vbox{width:min(1000px,100%);background:var(--surface);border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+.vbox{width:min(1000px,100%);max-height:100%;background:var(--surface);border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.4)}
 .vhead{display:flex;align-items:center;gap:8px;padding:10px 12px}
 .vhead b{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--f-display);font-weight:500}
-.vframe{position:relative;aspect-ratio:16/9;background:#000}
-.vframe iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.vframe{position:relative;background:#000}
+.vframe.vvid{aspect-ratio:16/9}
+.vframe.vdoc{height:calc(100dvh - 110px);overflow:auto;background:#525659;-webkit-overflow-scrolling:touch}
+.vframe iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#fff}
+.vframe img{display:block;max-width:100%;margin:0 auto}
+.vpage{background:#fff;margin:8px auto;width:calc(100% - 16px)}
+.vpage canvas{display:block;width:100%;height:auto}
+.vload{color:#fff;padding:24px;text-align:center}
 .hpanel{position:fixed;right:max(16px,env(safe-area-inset-right,0px));top:calc(env(safe-area-inset-top,0px) + 74px);z-index:31;
   width:min(360px,calc(100vw - 32px));max-height:min(520px,calc(100vh - 110px));display:flex;flex-direction:column;
   background:var(--surface);border:1px solid var(--line);border-radius:18px;box-shadow:0 18px 50px rgba(10,30,50,.25);overflow:hidden}
@@ -642,7 +648,7 @@ body.authmode .authwrap{min-height:calc(100vh - 160px);padding:0}
 <nav class="mbar" id="mbar" aria-label="Мобильді навигация"></nav>
 <div class="vmodal" id="vmodal" hidden role="dialog" aria-modal="true" aria-labelledby="vTitle">
   <div class="vbox">
-    <div class="vhead"><b id="vTitle"></b><a id="vExt" class="btn sm ghost" target="_blank" rel="noopener">YouTube ↗</a><button class="btn sm ghost" id="vClose" aria-label="Жабу">✕</button></div>
+    <div class="vhead"><b id="vTitle"></b><a id="vExt" class="btn sm ghost" target="_blank" rel="noopener">Жаңа бетте ↗</a><button class="btn sm ghost" id="vClose" aria-label="Жабу">✕</button></div>
     <div class="vframe" id="vFrame"></div>
   </div>
 </div>
@@ -910,7 +916,7 @@ function authMsg(e){
   if (m.includes('fetch') || m.includes('network')) return 'Серверге қосылу мүмкін болмады. Интернетті тексер.';
   return 'Қате: ' + ((e && e.message) || 'белгісіз');
 }
-/* ---------- in-site YouTube player ---------- */
+/* ---------- in-site viewer: YouTube, PDF, images, Google/Office docs ---------- */
 function ytInfo(u){
   try {
     const x = new URL(u), h = x.hostname.replace(/^(www|m|music)\./, '');
@@ -926,23 +932,87 @@ function ytInfo(u){
     return { id, sec };
   } catch { return null; }
 }
-const ytAttr = (u, title) => ytInfo(u) ? ` data-yt="${esc(u)}" data-yt-title="${esc(title || '')}"` : '';
-function openVideo(u, title){
-  const v = ytInfo(u); if (!v) return false;
-  $('#vTitle').textContent = title || 'Видео';
-  $('#vExt').href = u;
-  $('#vFrame').innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(v.id)}?autoplay=1&rel=0&modestbranding=1&playsinline=1${v.sec ? '&start=' + v.sec : ''}" title="${esc(title || 'Видео')}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>`;
+function viewKind(u){
+  if (!u || u === '#') return null;
+  let x; try { x = new URL(u, location.href); } catch { return null; }
+  if (!/^https?:$/.test(x.protocol)) return null;
+  const yt = ytInfo(x.href); if (yt) return { k:'yt', ...yt };
+  const h = x.hostname, path = decodeURIComponent(x.pathname).toLowerCase();
+  let m;
+  if (h === 'drive.google.com' && (m = x.pathname.match(/\/file\/d\/([\w-]+)/))) return { k:'frame', src:`https://drive.google.com/file/d/${m[1]}/preview` };
+  if (h === 'drive.google.com' && x.searchParams.get('id')) return { k:'frame', src:`https://drive.google.com/file/d/${encodeURIComponent(x.searchParams.get('id'))}/preview` };
+  if (h === 'docs.google.com' && (m = x.pathname.match(/^\/(document|presentation|spreadsheets)\/d\/([\w-]+)/))) return { k:'frame', src:`https://docs.google.com/${m[1]}/d/${m[2]}/preview` };
+  if (/\.pdf$/.test(path)) return { k:'pdf', src:x.href };
+  if (/\.(png|jpe?g|gif|webp|svg|avif)$/.test(path)) return { k:'img', src:x.href };
+  if (/\.(docx?|pptx?|xlsx?)$/.test(path)) return { k:'frame', src:'https://view.officeapps.live.com/op/embed.aspx?src=' + encodeURIComponent(x.href) };
+  return null;
+}
+const titleAttr = (u, title) => ` data-title="${esc(title || '')}"`;
+let pdfLib = null;
+function loadPdfJs(){
+  if (pdfLib) return pdfLib;
+  pdfLib = new Promise((ok, no) => {
+    const sc = document.createElement('script');
+    sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    sc.onload = () => { window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; ok(window.pdfjsLib); };
+    sc.onerror = () => { pdfLib = null; no(new Error('pdf.js')); };
+    document.head.appendChild(sc);
+  });
+  return pdfLib;
+}
+let viewSeq = 0;
+async function renderPdf(src, box, seq){
+  box.innerHTML = '<div class="vload">PDF ашылып жатыр…</div>';
+  try {
+    const lib = await loadPdfJs();
+    const doc = await lib.getDocument({ url:src }).promise;
+    if (seq !== viewSeq) return;
+    box.innerHTML = '';
+    const dpr = Math.min(window.devicePixelRatio || 1, 2), W = box.clientWidth - 16;
+    const io = new IntersectionObserver(es => es.forEach(async en => {
+      if (!en.isIntersecting || en.target.dataset.done) return;
+      en.target.dataset.done = 1; io.unobserve(en.target);
+      const pg = await doc.getPage(+en.target.dataset.p); if (seq !== viewSeq) return;
+      const vp0 = pg.getViewport({ scale:1 }), vp = pg.getViewport({ scale:(W / vp0.width) * dpr });
+      const c = document.createElement('canvas'); c.width = vp.width; c.height = vp.height;
+      await pg.render({ canvasContext:c.getContext('2d'), viewport:vp }).promise;
+      en.target.replaceChildren(c);
+    }), { root:box, rootMargin:'800px 0px' });
+    const first = await doc.getPage(1), r = first.getViewport({ scale:1 });
+    for (let i = 1; i <= doc.numPages; i++){
+      const d = document.createElement('div'); d.className = 'vpage'; d.dataset.p = i;
+      d.style.aspectRatio = `${r.width} / ${r.height}`;
+      box.appendChild(d); io.observe(d);
+    }
+  } catch (err){
+    console.warn(err); if (seq !== viewSeq) return;
+    box.innerHTML = `<iframe src="${esc(src)}" title="PDF"></iframe>`;
+  }
+}
+function openViewer(u, title){
+  const v = viewKind(u); if (!v) return false;
+  const seq = ++viewSeq, box = $('#vFrame');
+  $('#vTitle').textContent = title || 'Материал';
+  $('#vExt').href = u; $('#vExt').textContent = v.k === 'yt' ? 'YouTube ↗' : 'Жаңа бетте ↗';
+  box.className = 'vframe ' + (v.k === 'yt' ? 'vvid' : 'vdoc');
+  if (v.k === 'yt') box.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(v.id)}?autoplay=1&rel=0&modestbranding=1&playsinline=1${v.sec ? '&start=' + v.sec : ''}" title="${esc(title || 'Видео')}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>`;
+  else if (v.k === 'img') box.innerHTML = `<img src="${esc(v.src)}" alt="${esc(title || '')}">`;
+  else if (v.k === 'frame') box.innerHTML = `<iframe src="${esc(v.src)}" title="${esc(title || 'Құжат')}" allow="fullscreen" allowfullscreen></iframe>`;
   $('#vmodal').hidden = false; document.body.style.overflow = 'hidden';
+  if (v.k === 'pdf') renderPdf(v.src, box, seq);
   $('#vClose').focus();
   return true;
 }
-function closeVideo(){ $('#vmodal').hidden = true; $('#vFrame').innerHTML = ''; document.body.style.overflow = ''; }
+function closeViewer(){ viewSeq++; $('#vmodal').hidden = true; $('#vFrame').innerHTML = ''; document.body.style.overflow = ''; }
 document.addEventListener('click', e => {
-  const a = e.target.closest('a[data-yt]');
-  if (a && !e.metaKey && !e.ctrlKey && !e.shiftKey && openVideo(a.dataset.yt, a.dataset.ytTitle)){ e.preventDefault(); return; }
-  if (e.target.id === 'vmodal' || e.target.closest('#vClose')) closeVideo();
+  const a = e.target.closest('a[target="_blank"][href]');
+  if (a && !a.closest('#vmodal') && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey){
+    const title = a.dataset.title || a.textContent.replace(/[↗🔗📄▶]/gu, '').trim();
+    if (openViewer(a.getAttribute('href'), title)){ e.preventDefault(); return; }
+  }
+  if (e.target.id === 'vmodal' || e.target.closest('#vClose')) closeViewer();
 });
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#vmodal').hidden) closeVideo(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#vmodal').hidden) closeViewer(); });
 
 document.addEventListener('click', e => {
   const t = e.target.closest('[data-auth]'); if (!t) return;
@@ -1307,11 +1377,11 @@ function renderMaterials(){
   const card = m => { const lk = m.link ? safeUrl(m.link) : '', yt = /(^|\.)(youtube\.com|youtu\.be)$/i.test(lk ? new URL(lk).hostname : ''), on = !cur && !!seen[m.id];
     const nSeen = cur ? studs.filter(st => S.progress[st.id]?.seen?.[m.id]).length : 0;
     return `<article class="card ${on ? 'seen' : ''}" style="display:flex;flex-direction:column;gap:8px">
-    <h3>${lk ? `<a class="mtitle" href="${esc(lk)}" target="_blank" rel="noopener"${ytAttr(lk, m.title)}><span class="yt" aria-hidden="true">▶</span>${esc(m.title)} <span class="arr">↗</span></a>` : esc(m.title)}</h3>
+    <h3>${lk ? `<a class="mtitle" href="${esc(lk)}" target="_blank" rel="noopener"${titleAttr(lk, m.title)}><span class="yt" aria-hidden="true">▶</span>${esc(m.title)} <span class="arr">↗</span></a>` : esc(m.title)}</h3>
     ${m.desc ? `<p class="tdesc">${esc(m.desc)}</p>` : ''}
     <div class="actions" style="margin-top:auto;align-items:center">
-      ${lk ? `<a class="btn sm" href="${esc(lk)}" target="_blank" rel="noopener"${ytAttr(lk, m.title)}>Ашу ↗</a>` : ''}
-      ${m.file ? `<a class="btn sm" href="${esc(fileUrl('materials', m.file.path))}" target="_blank" rel="noopener">${esc(m.file.name)}</a>` : ''}
+      ${lk ? `<a class="btn sm" href="${esc(lk)}" target="_blank" rel="noopener"${titleAttr(lk, m.title)}>Ашу ↗</a>` : ''}
+      ${m.file ? `<a class="btn sm" href="${esc(fileUrl('materials', m.file.path))}" target="_blank" rel="noopener"${titleAttr('', m.title)}>${esc(m.file.name)}</a>` : ''}
       ${cur ? `<span class="muted" style="font-size:.85rem">Көрген: ${nSeen}/${studs.length}</span><button class="btn sm ghost danger" data-act="del" data-col="materials" data-id="${esc(m.id)}" style="margin-left:auto">Өшіру</button>`
             : `<label class="seen-tick ${on ? 'on' : ''}" title="Көрдім" aria-label="Көрдім"><input type="checkbox" data-act="seen" data-m="${esc(m.id)}" ${on ? 'checked' : ''}></label>`}
     </div></article>`; };
