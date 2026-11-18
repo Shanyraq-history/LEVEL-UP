@@ -214,6 +214,13 @@ tr.open td{background:color-mix(in srgb,var(--accent) 10%,var(--surface))}
 .greet svg{width:44px;height:50px;flex:0 0 auto}
 @keyframes pop{from{opacity:0;transform:translateX(8px) scale(.96)}to{opacity:1;transform:none}}
 @media (max-width:520px){ .greet .gb small{display:none} .greet .gb{max-width:150px} }
+.vmodal{position:fixed;inset:0;z-index:60;background:rgba(4,14,22,.78);display:grid;place-items:center;padding:max(12px,env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) max(12px,env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px))}
+.vmodal[hidden]{display:none}
+.vbox{width:min(1000px,100%);background:var(--surface);border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+.vhead{display:flex;align-items:center;gap:8px;padding:10px 12px}
+.vhead b{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--f-display);font-weight:500}
+.vframe{position:relative;aspect-ratio:16/9;background:#000}
+.vframe iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
 .hpanel{position:fixed;right:max(16px,env(safe-area-inset-right,0px));top:calc(env(safe-area-inset-top,0px) + 74px);z-index:31;
   width:min(360px,calc(100vw - 32px));max-height:min(520px,calc(100vh - 110px));display:flex;flex-direction:column;
   background:var(--surface);border:1px solid var(--line);border-radius:18px;box-shadow:0 18px 50px rgba(10,30,50,.25);overflow:hidden}
@@ -633,6 +640,12 @@ body.authmode .authwrap{min-height:calc(100vh - 160px);padding:0}
   <aside class="rail" id="rail" hidden aria-label="Апта және NOVA"></aside>
 </div>
 <nav class="mbar" id="mbar" aria-label="Мобильді навигация"></nav>
+<div class="vmodal" id="vmodal" hidden role="dialog" aria-modal="true" aria-labelledby="vTitle">
+  <div class="vbox">
+    <div class="vhead"><b id="vTitle"></b><a id="vExt" class="btn sm ghost" target="_blank" rel="noopener">YouTube ↗</a><button class="btn sm ghost" id="vClose" aria-label="Жабу">✕</button></div>
+    <div class="vframe" id="vFrame"></div>
+  </div>
+</div>
 
 <aside class="hpanel" id="hpanel" hidden aria-label="NOVA көмекшісі">
   <header><span id="hpBot"></span><span><b>NOVA</b><small>LEVEL UP көмекшісі</small></span><button id="hpClose" aria-label="Жабу">×</button></header>
@@ -897,6 +910,40 @@ function authMsg(e){
   if (m.includes('fetch') || m.includes('network')) return 'Серверге қосылу мүмкін болмады. Интернетті тексер.';
   return 'Қате: ' + ((e && e.message) || 'белгісіз');
 }
+/* ---------- in-site YouTube player ---------- */
+function ytInfo(u){
+  try {
+    const x = new URL(u), h = x.hostname.replace(/^(www|m|music)\./, '');
+    let id = '';
+    if (h === 'youtu.be') id = x.pathname.slice(1).split('/')[0];
+    else if (/(^|\.)youtube(-nocookie)?\.com$/.test(h)){
+      id = x.searchParams.get('v') || (x.pathname.match(/^\/(?:embed|shorts|live|v)\/([^/?#]+)/) || [])[1] || '';
+    }
+    if (!/^[\w-]{6,20}$/.test(id)) return null;
+    const t = x.searchParams.get('t') || x.searchParams.get('start') || '';
+    let sec = 0; const mm = String(t).match(/^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s?)?$/);
+    if (mm) sec = (+mm[1] || 0) * 3600 + (+mm[2] || 0) * 60 + (+mm[3] || 0);
+    return { id, sec };
+  } catch { return null; }
+}
+const ytAttr = (u, title) => ytInfo(u) ? ` data-yt="${esc(u)}" data-yt-title="${esc(title || '')}"` : '';
+function openVideo(u, title){
+  const v = ytInfo(u); if (!v) return false;
+  $('#vTitle').textContent = title || 'Видео';
+  $('#vExt').href = u;
+  $('#vFrame').innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(v.id)}?autoplay=1&rel=0&modestbranding=1&playsinline=1${v.sec ? '&start=' + v.sec : ''}" title="${esc(title || 'Видео')}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>`;
+  $('#vmodal').hidden = false; document.body.style.overflow = 'hidden';
+  $('#vClose').focus();
+  return true;
+}
+function closeVideo(){ $('#vmodal').hidden = true; $('#vFrame').innerHTML = ''; document.body.style.overflow = ''; }
+document.addEventListener('click', e => {
+  const a = e.target.closest('a[data-yt]');
+  if (a && !e.metaKey && !e.ctrlKey && !e.shiftKey && openVideo(a.dataset.yt, a.dataset.ytTitle)){ e.preventDefault(); return; }
+  if (e.target.id === 'vmodal' || e.target.closest('#vClose')) closeVideo();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#vmodal').hidden) closeVideo(); });
+
 document.addEventListener('click', e => {
   const t = e.target.closest('[data-auth]'); if (!t) return;
   S.authMode = t.dataset.auth; renderAuth();
@@ -1260,10 +1307,10 @@ function renderMaterials(){
   const card = m => { const lk = m.link ? safeUrl(m.link) : '', yt = /(^|\.)(youtube\.com|youtu\.be)$/i.test(lk ? new URL(lk).hostname : ''), on = !cur && !!seen[m.id];
     const nSeen = cur ? studs.filter(st => S.progress[st.id]?.seen?.[m.id]).length : 0;
     return `<article class="card ${on ? 'seen' : ''}" style="display:flex;flex-direction:column;gap:8px">
-    <h3>${lk ? `<a class="mtitle" href="${esc(lk)}" target="_blank" rel="noopener"><span class="yt" aria-hidden="true">▶</span>${esc(m.title)} <span class="arr">↗</span></a>` : esc(m.title)}</h3>
+    <h3>${lk ? `<a class="mtitle" href="${esc(lk)}" target="_blank" rel="noopener"${ytAttr(lk, m.title)}><span class="yt" aria-hidden="true">▶</span>${esc(m.title)} <span class="arr">↗</span></a>` : esc(m.title)}</h3>
     ${m.desc ? `<p class="tdesc">${esc(m.desc)}</p>` : ''}
     <div class="actions" style="margin-top:auto;align-items:center">
-      ${lk ? `<a class="btn sm" href="${esc(lk)}" target="_blank" rel="noopener">Ашу ↗</a>` : ''}
+      ${lk ? `<a class="btn sm" href="${esc(lk)}" target="_blank" rel="noopener"${ytAttr(lk, m.title)}>Ашу ↗</a>` : ''}
       ${m.file ? `<a class="btn sm" href="${esc(fileUrl('materials', m.file.path))}" target="_blank" rel="noopener">${esc(m.file.name)}</a>` : ''}
       ${cur ? `<span class="muted" style="font-size:.85rem">Көрген: ${nSeen}/${studs.length}</span><button class="btn sm ghost danger" data-act="del" data-col="materials" data-id="${esc(m.id)}" style="margin-left:auto">Өшіру</button>`
             : `<label class="seen-tick ${on ? 'on' : ''}" title="Көрдім" aria-label="Көрдім"><input type="checkbox" data-act="seen" data-m="${esc(m.id)}" ${on ? 'checked' : ''}></label>`}
