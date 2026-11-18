@@ -8,11 +8,11 @@
 <script src="config.js"></script>
 <script>try{var t=localStorage.getItem("levelup-theme");if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
 <link rel="preload" href="fonts/juz40-regular.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="fonts/juz40-bold.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/juz40-medium.woff2" as="font" type="font/woff2" crossorigin>
 <style>
-@font-face{font-family:"JUZ40";src:url("fonts/juz40-regular.woff2") format("woff2");font-weight:400;font-style:normal;font-display:swap}
-@font-face{font-family:"JUZ40";src:url("fonts/juz40-medium.woff2") format("woff2");font-weight:500;font-style:normal;font-display:swap}
-@font-face{font-family:"JUZ40";src:url("fonts/juz40-bold.woff2") format("woff2");font-weight:600 700;font-style:normal;font-display:swap}
+/* Weights one step lighter site-wide: regular & medium text use the regular file, bold text uses the medium file */
+@font-face{font-family:"JUZ40";src:url("fonts/juz40-regular.woff2") format("woff2");font-weight:100 500;font-style:normal;font-display:swap}
+@font-face{font-family:"JUZ40";src:url("fonts/juz40-medium.woff2") format("woff2");font-weight:600 900;font-style:normal;font-display:swap}
 /* Layout: robot-lab console. Silver shell + dark visor panels, cyan "eye" glow as the single accent. Sidebar nav, one working column. */
 :root{
   --bg:#EDF1F5; --surface:#FFFFFF; --surface-2:#E2E8EF; --ink:#13243A; --muted:#566880; --line:#CDD6E1;
