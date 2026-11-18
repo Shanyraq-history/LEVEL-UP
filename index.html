@@ -295,6 +295,13 @@ img{max-width:100%}
 .hello .btn.primary{background:var(--glow);border-color:var(--glow);color:#06202B}
 @keyframes helloIn{from{opacity:0;transform:translateY(-10px) scale(.97)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.bot.wave .bot-arm-r{animation:none;transform:rotate(150deg)}}
+.runstat{display:flex;gap:6px;flex-wrap:wrap;position:sticky;top:calc(env(safe-area-inset-top,0px) + 70px);z-index:5;background:var(--surface);padding:8px 0}
+.qwrap{display:flex;flex-direction:column;gap:8px;padding:10px 0;border-top:1px solid var(--line)}
+.qwrap:first-of-type{border-top:0}
+.qwrap .q{border-top:0;padding:0}
+.qwrap > .btn{align-self:flex-start}
+.verdict{font-weight:600;margin:0}
+.verdict.ok{color:var(--ok)} .verdict.bad{color:var(--bad)}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 @media (max-width:420px){.row2{grid-template-columns:1fr}}
 </style>
@@ -617,6 +624,7 @@ function route(){
   const m = /^s-([a-z0-9]+)-([a-z0-9]+)$/.exec(h);
   if (m){ S.view = 'subject'; S.subject = m[1]; S.tab = m[2]; }
   else if (h === 'students'){ S.view = 'students'; }
+  else if (h === 'mistakes'){ S.view = 'mistakes'; }
   else { S.view = 'plan'; }
   S.testOpen = null;
 }
@@ -637,6 +645,7 @@ const ICONS = {
   book:'<path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM4 21V5M8 7h7"/>',
   users:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M21.5 20a6.5 6.5 0 0 0-4-6"/>',
   plus:'<path d="M12 5v14M5 12h14"/>',
+  redo:'<path d="M4 12a8 8 0 1 0 2.3-5.6M4 4v4.5h4.5"/><path d="M9.5 12.5l2 2 3.5-4"/>',
 };
 const ico = k => `<svg class="ni" viewBox="0 0 24 24" aria-hidden="true">${ICONS[k] || ICONS.book}</svg>`;
 function renderNav(){
@@ -644,6 +653,7 @@ function renderNav(){
   const left = r === 'curator' ? t.length : t.filter(x => !m.tasks?.[x.id]?.done).length;
   const badge = n => n ? `<span class="badge num">${n}</span>` : '';
   let h = `<p class="navh">Шолу</p><a href="#plan" ${S.view==='plan' ? 'aria-current="page"' : ''}>${ico('home')}<span class="nl">Басты бет</span>${badge(left)}</a>`;
+  if (r !== 'curator') h += `<a href="#mistakes" ${S.view==='mistakes' ? 'aria-current="page"' : ''}>${ico('redo')}<span class="nl">Қатемен жұмыс</span>${badge(Object.keys(MY().mistakes || {}).length)}</a>`;
   h += `<p class="navh">Пәндер</p>`;
   const subs = subjects();
   subs.forEach(s => {
@@ -733,6 +743,8 @@ function renderShell(){
         <div class="actions"><button class="btn" type="button" data-act="add-q">+ Сұрақ қосу</button><button class="btn primary" type="submit" style="margin-left:auto">Тестті жариялау</button></div></form>`;
       html += `<div id="testList" class="list"></div>`;
     }
+  } else if (v === 'mistakes'){
+    html += `<section class="vhead"><div><p class="eyebrow">Шолу</p><h1>Қатемен жұмыс</h1><p class="lead">Барлық тесттерде қате жауап берген сұрақтарың осында жиналады. Қайта өтіп, дұрыс жауап берсең, сұрақ тізімнен өзі шығады.</p></div></section><div id="mistBox"></div>`;
   } else if (v === 'students'){
     html += `<section class="vhead"><div><p class="eyebrow">Оқушылар</p><h1>Оқушылар</h1><p class="lead">Әр оқушының тапсырмалары, дәлелдері, чек-лист пен тест нәтижелері.</p></div></section>
       <div class="datectl"><span class="muted">Күн:</span><button class="btn sm" data-act="day" data-d="-1">‹</button><input type="date" id="planDate" value="${S.date}"><button class="btn sm" data-act="day" data-d="1">›</button><button class="btn sm ghost" data-act="today">Бүгін</button></div><div id="stuList"></div><div id="stuDetail"></div>`;
@@ -782,6 +794,7 @@ function renderData(){
     else renderTests();
   }
   else if (v === 'students') renderStudents();
+  else if (v === 'mistakes') renderMistakes();
 }
 
 function renderPlanStudent(){
@@ -920,6 +933,73 @@ function qReview(q, qi, a){
   return `<div class="q">${qHead(q, qi)}${q.options.map((o, oi) => `<div class="opt ${ok(oi) ? 'right' : (picked(oi) ? 'wrong' : '')}">${esc(o)}</div>`).join('')}</div>`;
 }
 
+S.testChecked = {}; S.mistRun = null; S.mistSubj = '';
+function mistakeList(){
+  const mm = MY().mistakes || {};
+  return Object.entries(mm).map(([key, m]) => { const t = S.tests.find(x => x.id === m.t); const q = t && t.questions && t.questions[m.i]; return q ? { key, tid:m.t, i:m.i, at:m.at, q, test:t } : null; })
+    .filter(Boolean).sort((a, b) => (a.at || 0) - (b.at || 0));
+}
+function runQs(id){
+  if (id === '__mist') return (S.mistRun || []).map(k => { const [tid, i] = k.split(':'); const t = S.tests.find(x => x.id === tid); const q = t && t.questions && t.questions[+i]; return q ? { tid, i:+i, q, test:t } : null; }).filter(Boolean);
+  const t = S.tests.find(x => x.id === id); return t ? (t.questions || []).map((q, i) => ({ tid:id, i, q, test:t })) : [];
+}
+function qBlock(id, it, qi){
+  const d = (S.testDraft[id] || {})[qi], ck = (S.testChecked[id] || {})[qi];
+  const src = id === '__mist' ? `<span class="muted qhint">${esc(subjName(it.test.subject))} · ${esc(it.test.title)}</span>` : '';
+  if (ck){ const ok = qRight(it.q, d); return `<div class="qwrap ${ok ? 'is-ok' : 'is-bad'}" data-qi="${qi}">${src}${qReview(it.q, qi, d)}<p class="verdict ${ok ? 'ok' : 'bad'}">${ok ? '✓ Дұрыс!' : '✗ Қате. Дұрыс жауап жасылмен белгіленген.'}</p></div>`; }
+  return `<div class="qwrap" data-qi="${qi}">${src}${qRun(it.q, qi, d)}${qKind(it.q) !== 'single' ? `<button type="button" class="btn sm" data-act="qcheck" data-t="${esc(id)}" data-qi="${qi}">Тексеру</button>` : ''}</div>`;
+}
+function runStat(id){
+  const list = runQs(id), ck = S.testChecked[id] || {}, d = S.testDraft[id] || {};
+  let ok = 0, bad = 0; list.forEach((it, qi) => { if (ck[qi]) (qRight(it.q, d[qi]) ? ok++ : bad++); });
+  return `<span class="chip ok">Дұрыс: ${ok}</span><span class="chip bad">Қате: ${bad}</span><span class="chip">Қалды: ${list.length - ok - bad}</span>`;
+}
+function runForm(id, finishLabel, extra){
+  const list = runQs(id);
+  return `<form data-test="${esc(id)}" class="testrun"><div class="runstat" data-stat>${runStat(id)}</div>${list.map((it, qi) => qBlock(id, it, qi)).join('')}
+    <div class="actions" style="margin-top:12px"><button class="btn primary" type="submit">${esc(finishLabel)}</button>${extra || ''}</div></form>`;
+}
+function noteMistake(it, ok){
+  const my = S.preview ? S.previewMy : (S.my = S.my || { tasks:{}, checks:{}, tests:{} });
+  my.mistakes = my.mistakes || {};
+  const key = `${it.tid}:${it.i}`;
+  if (ok){ if (!my.mistakes[key]) return; delete my.mistakes[key]; }
+  else { if (my.mistakes[key]) return; my.mistakes[key] = { t:it.tid, i:it.i, at:Date.now() }; }
+  renderNav();
+  if (RO()) return;
+  pendingWrites++;
+  chain = chain.then(async () => {
+    try { await q(sb.from('progress').upsert({ user_id:S.uid, data:S.my, updated_at:new Date().toISOString() })); }
+    catch (e){ console.warn(e); toast('Сақталмады. Интернетті тексеріп, қайталап көр.'); }
+    finally { pendingWrites--; }
+  });
+}
+function checkQ(f, id, qi){
+  const it = runQs(id)[qi]; if (!it) return;
+  const a = qRead(f, it.q, qi), k = qKind(it.q);
+  if (k === 'single' && a < 0) return;
+  if (k === 'multi' && !a.length){ toast('Кемінде бір жауап таңда'); return; }
+  if (k === 'match' && a.some(x => x < 0)){ toast('Барлық жолға жауап таңда'); return; }
+  (S.testDraft[id] = S.testDraft[id] || {})[qi] = a;
+  (S.testChecked[id] = S.testChecked[id] || {})[qi] = true;
+  const w = f.querySelector(`.qwrap[data-qi="${qi}"]`); if (w) w.outerHTML = qBlock(id, it, qi);
+  const st = f.querySelector('[data-stat]'); if (st) st.innerHTML = runStat(id);
+  noteMistake(it, qRight(it.q, a));
+}
+function renderMistakes(){
+  const el = $('#mistBox'); if (!el) return;
+  if (S.mistRun){ el.innerHTML = runForm('__mist', 'Аяқтау'); return; }
+  const all = mistakeList();
+  if (!all.length){ el.innerHTML = emptyBox('Қате сұрақ жоқ. Жарайсың! Тест тапсырғанда қателескен сұрақтарың осында пайда болады.'); return; }
+  const subjIds = [...new Set(all.map(m => m.test.subject))];
+  const list = S.mistSubj ? all.filter(m => m.test.subject === S.mistSubj) : all;
+  const byTest = {}; list.forEach(m => { (byTest[m.tid] = byTest[m.tid] || { t:m.test, n:0 }).n++; });
+  el.innerHTML = `<div class="card" style="display:flex;flex-direction:column;gap:14px">
+    <div class="mini" style="gap:12px;flex-wrap:wrap"><span class="score num">${list.length}</span><span class="muted">қате сұрақ</span></div>
+    ${subjIds.length > 1 ? `<div class="pills" style="display:flex">${[['', 'Барлық пән'], ...subjIds.map(id => [id, subjName(id) || 'Пән'])].map(([id, n]) => `<a href="#" data-act="mist-subj" data-id="${esc(id)}" ${S.mistSubj === id ? 'aria-current="page"' : ''}>${esc(n)}</a>`).join('')}</div>` : ''}
+    <div class="who" style="border:0;padding:0">${Object.values(byTest).map(x => `<div class="who-row"><span>${esc(subjName(x.t.subject))} · ${esc(x.t.title)}</span><span class="num">${x.n}</span></div>`).join('')}</div>
+    <div class="actions"><button class="btn primary" data-act="mist-start">Қателерді қайта өту (${list.length})</button></div></div>`;
+}
 function renderTests(){
   const el = $('#testList'); if (!el) return;
   const items = S.tests.filter(t => t.subject === S.subject && (t.section || 'tests') === S.tab).sort((a,b) => (a.createdAt||0) - (b.createdAt||0));
@@ -941,8 +1021,7 @@ function renderTests(){
     const draft = S.testDraft[t.id] || {};
     let body = '';
     if (open){
-      body = `<form data-test="${esc(t.id)}" class="testrun">${qs.map((q, qi) => qRun(q, qi, draft[qi])).join('')}
-        <div class="actions" style="margin-top:12px"><button class="btn primary" type="submit">Тапсыру</button><button class="btn ghost" type="button" data-act="open-test" data-id="${esc(t.id)}">Болдырмау</button></div></form>`;
+      body = runForm(t.id, 'Тестті аяқтау', `<button class="btn ghost" type="button" data-act="open-test" data-id="${esc(t.id)}">Болдырмау</button>`);
     } else if (mine){
       body = `<div class="mini" style="gap:14px"><span class="score num">${mine.score}/${mine.total}</span><span class="muted">${pct(mine.score, mine.total)}% · ${mine.at ? fmtDT(mine.at) : ''}</span></div>
         <details><summary class="muted" style="cursor:pointer">Жауаптарымды көру</summary>${qs.map((q, qi) => qReview(q, qi, mine.answers?.[qi])).join('')}</details>`;
@@ -1054,8 +1133,11 @@ document.addEventListener('click', async e => {
   }
   if (act === 'toggle-task'){ S.openTasks[b.dataset.id] = !S.openTasks[b.dataset.id]; renderData(); return; }
   if (act === 'open-stu'){ S.openStudent = S.openStudent === b.dataset.id ? null : b.dataset.id; renderData(); if (S.openStudent) $('#stuDetail').scrollIntoView({ behavior:'smooth', block:'start' }); return; }
-  if (act === 'open-test'){ S.testOpen = S.testOpen === b.dataset.id ? null : b.dataset.id; renderData(); return; }
+  if (act === 'open-test'){ delete S.testChecked[b.dataset.id]; delete S.testDraft[b.dataset.id]; S.testOpen = S.testOpen === b.dataset.id ? null : b.dataset.id; renderData(); return; }
   if (act === 'add-q'){ addQ(); return; }
+  if (act === 'qcheck'){ const f = b.closest('form'); if (f) checkQ(f, b.dataset.t, +b.dataset.qi); return; }
+  if (act === 'mist-start'){ const l = mistakeList().filter(m => !S.mistSubj || m.test.subject === S.mistSubj); S.mistRun = l.map(m => m.key); S.testDraft.__mist = {}; S.testChecked.__mist = {}; renderData(); return; }
+  if (act === 'mist-subj'){ e.preventDefault(); S.mistSubj = b.dataset.id || ''; renderData(); return; }
   if (act === 'rm-q'){ b.closest('.qb').remove(); renumberQ(); return; }
   if (act === 'del' || act === 'del-subj'){
     if (!b.dataset.armed){ b.dataset.armed = '1'; const old = b.textContent; b.textContent = act === 'del-subj' ? 'Пәнді өшіруді растау?' : 'Растау?'; setTimeout(() => { if (b.isConnected){ delete b.dataset.armed; b.textContent = old; } }, 3500); return; }
@@ -1128,7 +1210,7 @@ document.addEventListener('change', async e => {
     return;
   }
   const tf = t.closest('form.testrun');
-  if (tf && /^q\d+/.test(t.name || '')){ const id = tf.dataset.test, tt = S.tests.find(x => x.id === id), qi = parseInt(t.name.slice(1)); if (tt && tt.questions[qi]){ S.testDraft[id] = S.testDraft[id] || {}; S.testDraft[id][qi] = qRead(tf, tt.questions[qi], qi); } }
+  if (tf && /^q\d+/.test(t.name || '')){ const id = tf.dataset.test, qi = parseInt(t.name.slice(1)), it = runQs(id)[qi]; if (it){ S.testDraft[id] = S.testDraft[id] || {}; S.testDraft[id][qi] = qRead(tf, it.q, qi); if (qKind(it.q) === 'single' && t.type === 'radio') checkQ(tf, id, qi); } }
 });
 
 document.addEventListener('submit', async e => {
@@ -1225,10 +1307,19 @@ document.addEventListener('submit', async e => {
   }
   if (f.classList.contains('testrun')){
     e.preventDefault();
-    const id = f.dataset.test; const t = S.tests.find(x => x.id === id); if (!t) return;
-    const answers = t.questions.map((q, qi) => qRead(f, q, qi));
+    const id = f.dataset.test;
+    if (id === '__mist'){
+      const list = runQs(id), ck = S.testChecked[id] || {}, d = S.testDraft[id] || {};
+      const ok = list.filter((it, qi) => ck[qi] && qRight(it.q, d[qi])).length;
+      S.mistRun = null; delete S.testDraft[id]; delete S.testChecked[id];
+      renderData(); toast(`Түзетілді: ${ok} сұрақ. Қалғаны тізімде қалды.`); window.scrollTo({ top:0 }); return;
+    }
+    const t = S.tests.find(x => x.id === id); if (!t) return;
+    const ck = S.testChecked[id] || {}, dr = S.testDraft[id] || {};
+    const answers = t.questions.map((q, qi) => ck[qi] ? dr[qi] : qRead(f, q, qi));
+    answers.forEach((a, qi) => { const k = qKind(t.questions[qi]); const answered = k === 'multi' ? (a && a.length) : k === 'match' ? (a && a.some(x => x >= 0)) : a >= 0; if (!ck[qi] && answered) noteMistake({ tid:id, i:qi }, qRight(t.questions[qi], a)); });
     const score = answers.filter((a, qi) => qRight(t.questions[qi], a)).length;
-    S.testOpen = null; delete S.testDraft[id];
+    S.testOpen = null; delete S.testDraft[id]; delete S.testChecked[id];
     await writeMy({ tests: { [id]: { score, total: t.questions.length, answers, at: Date.now() } } });
     toast(`Нәтиже: ${score}/${t.questions.length}`);
   }
