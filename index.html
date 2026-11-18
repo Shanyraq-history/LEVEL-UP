@@ -505,6 +505,10 @@ th{font-family:var(--f-body);font-weight:700;color:var(--soft)}
 .ring.brk{background:conic-gradient(var(--warn) 0 var(--p),var(--surface-2) var(--p) 100%)}
 .fset{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;margin-top:14px;border-top:1px solid var(--line);padding-top:12px}
 .fset .f input{padding:7px 9px}
+.mtitle{color:inherit;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+.mtitle:hover{color:var(--prog)}.mtitle:hover .arr{transform:translate(2px,-2px)}
+.mtitle .arr{font-size:.8em;color:var(--muted);transition:transform .15s}
+.mtitle .yt{display:inline-grid;place-items:center;width:28px;height:20px;border-radius:6px;background:#e62117;color:#fff;font-size:.62rem;flex:0 0 auto}
 .stat.ubt .cd{display:flex;align-items:flex-start;justify-content:space-between;gap:2px}
 .stat.ubt .cu{display:flex;flex-direction:column;align-items:center;min-width:0}
 .stat.ubt .cu b{font-size:1.45rem;font-weight:700;letter-spacing:-.02em;line-height:1;font-variant-numeric:tabular-nums}
@@ -1055,7 +1059,7 @@ function renderShell(){
       if (r === 'curator') html += `<form class="card composer" id="matForm">
         <h2>${esc(tb.name)}: жаңа материал</h2>
         <div class="row"><label class="f">Атауы<input id="mTitle" required maxlength="140" placeholder="${esc(tb.ph || '')}"></label>
-        <label class="f">Сілтеме (міндетті емес)<input id="mLink" type="url" placeholder="https://"></label></div>
+        <label class="f">Сілтеме (міндетті емес)<input id="mLink" type="url" placeholder="${S.tab === 'analysis' ? 'YouTube сілтемесі: https://youtu.be/…' : 'https://'}"></label></div>
         <label class="f">Сипаттама<textarea id="mDesc" maxlength="4000"></textarea></label>
         <div class="actions"><label class="btn upload">PDF / файл тіркеу<input type="file" id="mFile" accept=".pdf,application/pdf,image/*,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip,.txt"></label><span id="mFileName" class="muted" style="font-size:.85rem"></span><button class="btn primary" type="submit" style="margin-left:auto">Қосу</button></div>
       </form>`;
@@ -1224,14 +1228,14 @@ function renderMaterials(){
   const el = $('#matList'); if (!el) return;
   const items = S.materials.filter(m => m.subject === S.subject && m.section === S.tab).sort((a,b) => (a.createdAt||0) - (b.createdAt||0));
   if (!items.length){ el.innerHTML = emptyBox(ROLE()==='curator' ? 'Бұл бөлім бос. Жоғарыдағы формадан алғашқы материалды қосыңыз.' : 'Куратор бұл бөлімге әлі материал қоспады.'); return; }
-  el.innerHTML = items.map(m => `<article class="card" style="display:flex;flex-direction:column;gap:8px">
-    <h3>${esc(m.title)}</h3>
+  el.innerHTML = items.map(m => { const lk = m.link ? safeUrl(m.link) : '', yt = /(^|\.)(youtube\.com|youtu\.be)$/i.test(lk ? new URL(lk).hostname : ''); return `<article class="card" style="display:flex;flex-direction:column;gap:8px">
+    <h3>${lk ? `<a class="mtitle" href="${esc(lk)}" target="_blank" rel="noopener">${yt ? '<span class="yt" aria-label="YouTube">▶</span>' : ''}${esc(m.title)} <span class="arr">↗</span></a>` : esc(m.title)}</h3>
     ${m.desc ? `<p class="tdesc">${esc(m.desc)}</p>` : ''}
     <div class="actions" style="margin-top:auto">
-      ${m.link ? `<a class="btn sm" href="${esc(m.link)}" target="_blank" rel="noopener">Ашу ↗</a>` : ''}
+      ${lk ? `<a class="btn sm" href="${esc(lk)}" target="_blank" rel="noopener">${yt ? 'Видеоны ашу ▶' : 'Ашу ↗'}</a>` : ''}
       ${m.file ? `<a class="btn sm" href="${esc(fileUrl('materials', m.file.path))}" target="_blank" rel="noopener">${esc(m.file.name)}</a>` : ''}
       ${ROLE()==='curator' ? `<button class="btn sm ghost danger" data-act="del" data-col="materials" data-id="${esc(m.id)}" style="margin-left:auto">Өшіру</button>` : ''}
-    </div></article>`).join('');
+    </div></article>`; }).join('');
 }
 
 function clFile(c){ return c.file ? `<div class="actions"><a class="btn sm" href="${esc(fileUrl('materials', c.file.path))}" target="_blank" rel="noopener">📄 ${esc(c.file.name)}</a></div>` : ''; }
