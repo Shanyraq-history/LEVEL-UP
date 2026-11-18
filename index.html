@@ -574,9 +574,10 @@ th{font-family:var(--f-body);font-weight:700;color:var(--soft)}
 }
 @media (max-width:560px){
   .hero{min-height:190px;padding:20px 17px}
-  .hero-content{max-width:72%}
+  .hero-content{max-width:68%}
   .hero p{font-size:.78rem}
-  .hero-art{transform:translateY(-50%) scale(.5);right:-70px}
+  .hero-art{transform:translateY(-50%) scale(.5);transform-origin:right center;right:-4px}
+  .hero-art .float-tag{display:none}
   .stats{gap:8px}
   .stats:has(.ubt){grid-template-columns:repeat(2,minmax(0,1fr))}
   .stat.ubt{grid-column:1/-1;order:-1;min-height:0}
