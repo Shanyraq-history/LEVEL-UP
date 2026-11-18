@@ -372,7 +372,7 @@ body{background:radial-gradient(circle at 82% 2%,var(--halo) 0%,transparent 25%)
 :root[data-subj="mat"]{--sc:#1B36B0}
 :root[data-subj="inf"]{--sc:#17404E}
 :root[data-subj]{--d0:#2A2F32; --d1:#323A3D; --d2:#394245; --d3:#4D575B}
-:root[data-subj="inf"]{--d0:#3B5158; --d1:#445B62; --d2:#4C646B; --d3:#5E767D}
+:root[data-subj="inf"]{--d0:#1A5565; --d1:#216476; --d2:#287085; --d3:#3A8BA0}
 :root[data-subj="hist"]{--d0:#3A3230; --d1:#433A38; --d2:#4B413F; --d3:#5E5351}
 :root[data-subj]:not([data-subj=""]){
   --bg:color-mix(in srgb,var(--sc) 8%,#F6F8F5); --surface:color-mix(in srgb,var(--sc) 3%,#FFFEFB); --surface-2:color-mix(in srgb,var(--sc) 10%,#FFFEFB); --line:color-mix(in srgb,var(--sc) 20%,#E4ECE8);
@@ -404,6 +404,9 @@ body{background:radial-gradient(circle at 82% 2%,var(--halo) 0%,transparent 25%)
 :root[data-subj]:not([data-subj=""]){--g1:color-mix(in srgb,var(--sc) 18%,#FFFFFF); --g2:color-mix(in srgb,var(--sc) 45%,#FFFFFF); --g3:color-mix(in srgb,var(--sc) 80%,#FFFFFF); --g4:var(--sc); --gbase:color-mix(in srgb,var(--sc) 14%,#FFFFFF); --ga:38%}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"])[data-subj]:not([data-subj=""]){--g1:color-mix(in srgb,var(--sc) 55%,#FFFFFF); --g2:color-mix(in srgb,var(--sc) 80%,#FFFFFF); --g3:var(--sc); --g4:color-mix(in srgb,var(--sc) 70%,#000000); --gbase:color-mix(in srgb,var(--sc) 55%,var(--d0)); --ga:70%}}
 :root[data-theme="dark"][data-subj]:not([data-subj=""]){--g1:color-mix(in srgb,var(--sc) 55%,#FFFFFF); --g2:color-mix(in srgb,var(--sc) 80%,#FFFFFF); --g3:var(--sc); --g4:color-mix(in srgb,var(--sc) 70%,#000000); --gbase:color-mix(in srgb,var(--sc) 55%,var(--d0)); --ga:70%}
+:root[data-subj="inf"]:not([data-subj=""]){--g1:#D3ECEF; --g2:#8CC6D1; --g3:#3E8FA1; --g4:#17404E; --gbase:#E3F1F2}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"])[data-subj="inf"]:not([data-subj=""]){--g1:#4FA3B5; --g2:#2E8197; --g3:#17404E; --g4:#0C2C36; --gbase:#1A5262; --ga:75%; --glow:#8FD3E0; --accent:#8FD3E0; --prog:#5FB9CC}}
+:root[data-theme="dark"][data-subj="inf"]:not([data-subj=""]){--g1:#4FA3B5; --g2:#2E8197; --g3:#17404E; --g4:#0C2C36; --gbase:#1A5262; --ga:75%; --glow:#8FD3E0; --accent:#8FD3E0; --prog:#5FB9CC}
 /* soft glossy multi-tone background: a few blobs of neighbouring shades of the subject colour */
 :root[data-subj]:not([data-subj=""]) body{background:
   radial-gradient(38% 32% at 12% 88%,color-mix(in srgb,var(--g1) 85%,transparent) 0%,transparent 70%),
@@ -1241,7 +1244,9 @@ function placeNova(){
   b.style.setProperty('--nova-right', Math.max(6, document.documentElement.clientWidth - r.right) + 'px');
 }
 addEventListener('resize', placeNova); addEventListener('load', placeNova);
-new MutationObserver(placeNova).observe(document.querySelector('header.top'), { attributes:true, attributeFilter:['hidden','class'], subtree:true, childList:true });
+if (window.ResizeObserver){ const ro = new ResizeObserver(() => requestAnimationFrame(placeNova)); const hd = document.querySelector('header.top'); ro.observe(hd); [...hd.children].forEach(c => ro.observe(c)); }
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(placeNova);
+new MutationObserver(() => requestAnimationFrame(placeNova)).observe(document.querySelector('header.top'), { attributes:true, attributeFilter:['hidden','class'], subtree:true, childList:true, characterData:true });
 function renderGreet(){
   const t = pubTasks(today()); const m = MY();
   const done = t.filter(x => m.tasks?.[x.id]?.done).length;
