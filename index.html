@@ -844,6 +844,7 @@ const sb = (CFG.url && CFG.key && window.supabase) ? window.supabase.createClien
 const EMAIL_DOMAIN = 'levelup.example.com';
 const LOGIN_RE = /^[a-z0-9._-]{3,32}$/;
 const loginEmail = l => `${l}@${EMAIL_DOMAIN}`;
+const baseName = n => String(n || '').replace(/\.[^.]+$/, '').replace(/[_]+/g, ' ').trim().slice(0, 140) || 'Файл';
 const safeName = n => String(n || 'file').replace(/[^A-Za-z0-9._-]+/g, '_').slice(-80);
 const msOf = t => t ? new Date(t).getTime() : 0;
 const MAX_UP = 50 * 1024 * 1024;
@@ -1263,7 +1264,7 @@ function renderShell(){
     else if (tb.kind === 'mat'){
       if (r === 'curator') html += `<form class="card composer" id="matForm">
         <h2>${esc(tb.name)}: жаңа материал</h2>
-        <div class="row"><label class="f">Атауы<input id="mTitle" required maxlength="140" placeholder="${esc(tb.ph || '')}"></label>
+        <div class="row"><label class="f">Атауы (міндетті емес)<input id="mTitle" maxlength="140" placeholder="${esc(tb.ph || 'Бос қалса, файлдың атауы қойылады')}"></label>
         <label class="f">Сілтеме (міндетті емес)<input id="mLink" type="url" placeholder="${S.tab === 'analysis' ? 'YouTube сілтемесі: https://youtu.be/…' : 'https://'}"></label></div>
         <label class="f">Сипаттама<textarea id="mDesc" maxlength="4000"></textarea></label>
         <div class="actions"><label class="btn upload">PDF / файл тіркеу<input type="file" id="mFile" accept=".pdf,application/pdf,image/*,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip,.txt"></label><span id="mFileName" class="muted" style="font-size:.85rem"></span><button class="btn primary" type="submit" style="margin-left:auto">Қосу</button></div>
@@ -1272,7 +1273,7 @@ function renderShell(){
     } else if (tb.kind === 'check'){
       if (r === 'curator') html += `<form class="card composer" id="clForm">
         <h2>${esc(tb.name)}: жаңа чек-лист</h2>
-        <label class="f">Атауы<input id="cTitle" required maxlength="140" placeholder="Мысалы: Тақырыпты қайталау"></label>
+        <label class="f">Атауы (міндетті емес)<input id="cTitle" maxlength="140" placeholder="Бос қалса, файлдың атауы қойылады"></label>
         <label class="f">Пункттер (әрқайсысы жаңа жолдан; PDF тіркесеңіз, бос қалдыруға болады)<textarea id="cItems" placeholder="Формулаларды жаттау\n10 есеп шығару\nҚателерді талдау"></textarea></label>
         <div class="actions"><label class="btn upload">PDF / файл тіркеу<input type="file" id="cFile" accept=".pdf,application/pdf,image/*,.doc,.docx"></label><span id="cFileName" class="muted" style="font-size:.85rem"></span><button class="btn primary" type="submit" style="margin-left:auto">Жариялау</button></div></form>`;
       html += `<div id="clList" class="grid"></div>`;
@@ -2022,9 +2023,11 @@ document.addEventListener('submit', async e => {
   }
   if (f.id === 'matForm'){
     e.preventDefault();
-    const title = $('#mTitle').value.trim(); if (!title) return;
+    const fi = $('#mFile').files[0], lnk = $('#mLink').value.trim();
+    const title = $('#mTitle').value.trim() || (fi ? baseName(fi.name) : '');
+    if (!title){ toast(lnk ? 'Сілтемеге атау жазыңыз' : 'Атау жазыңыз немесе файл тіркеңіз'); return; }
     const btn = f.querySelector('[type=submit]'); btn.disabled = true;
-    let file = null; const fi = $('#mFile').files[0];
+    let file = null;
     if (fi){
       try { file = await upMat(`${S.subject}/${Date.now()}-${safeName(fi.name)}`, fi, btn); }
       catch (err){ console.warn(err); toast(err.message, 9000); btn.disabled = false; return; }
@@ -2040,7 +2043,7 @@ document.addEventListener('submit', async e => {
     const btn = f.querySelector('[type=submit]'); btn.disabled = true;
     let file = null;
     if (fi){ try { file = await upMat(`${S.subject}/${Date.now()}-${safeName(fi.name)}`, fi, btn); } catch (err){ console.warn(err); toast(err.message, 9000); btn.disabled = false; return; } }
-    await cur(() => q(sb.from('checklists').insert({ subject:S.subject, section:S.tab, title:$('#cTitle').value.trim(), items, file_path:file ? file.path : null, file_name:file ? file.name : null })), 'Чек-лист жарияланды');
+    await cur(() => q(sb.from('checklists').insert({ subject:S.subject, section:S.tab, title:$('#cTitle').value.trim() || (fi ? baseName(fi.name) : 'Чек-лист'), items, file_path:file ? file.path : null, file_name:file ? file.name : null })), 'Чек-лист жарияланды');
     f.reset(); $('#cFileName').textContent = ''; btn.disabled = false; return;
   }
   if (f.id === 'testForm'){
