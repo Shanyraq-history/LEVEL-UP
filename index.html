@@ -274,6 +274,18 @@ img{max-width:100%}
 .pills .addpill{border-style:dashed;color:var(--accent);background:transparent}
 .themebtn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 @media (max-width:560px){.themebtn span{display:none}}
+.bot{overflow:visible}
+.bot.wave .bot-arm-r{transform-box:view-box;transform-origin:41px 118px;animation:wave 1.1s ease-in-out infinite}
+@keyframes wave{0%,100%{transform:rotate(135deg)}50%{transform:rotate(168deg)}}
+.hello{position:fixed;z-index:40;top:calc(env(safe-area-inset-top,0px) + 84px);right:max(16px,env(safe-area-inset-right,0px));width:min(420px,calc(100vw - 32px));
+  display:grid;grid-template-columns:110px minmax(0,1fr);gap:12px;align-items:center;background:var(--visor);color:var(--visor-ink);border-radius:20px;padding:16px;
+  box-shadow:0 0 0 1px rgba(63,221,244,.3),0 20px 50px rgba(10,30,50,.35);animation:helloIn .45s ease-out both}
+.hello svg{width:110px;height:126px}
+.hello h3{font-family:var(--f-display);font-weight:500;font-size:1.1rem;color:#fff;margin:0 0 6px}
+.hello p{color:#BFD2E3;font-size:.92rem;margin:0 0 10px}
+.hello .btn.primary{background:var(--glow);border-color:var(--glow);color:#06202B}
+@keyframes helloIn{from{opacity:0;transform:translateY(-10px) scale(.97)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.bot.wave .bot-arm-r{animation:none;transform:rotate(150deg)}}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 @media (max-width:420px){.row2{grid-template-columns:1fr}}
 </style>
@@ -337,7 +349,7 @@ function bot(cls = ''){
   </defs>
   <ellipse class="bot-shadow" cx="100" cy="222" rx="38" ry="5" fill="#7F93A8" opacity=".35"/>
   <g class="bot-float">
-    <rect x="30" y="118" width="22" height="62" rx="11" fill="url(#bShell)" stroke="#A9B7C7" stroke-width="1.5" transform="rotate(14 41 118)"/>
+    <rect class="bot-arm-r" x="30" y="118" width="22" height="62" rx="11" fill="url(#bShell)" stroke="#A9B7C7" stroke-width="1.5" transform="rotate(14 41 118)"/>
     <rect x="148" y="118" width="22" height="62" rx="11" fill="url(#bShell)" stroke="#A9B7C7" stroke-width="1.5" transform="rotate(-14 159 118)"/>
     <rect x="84" y="96" width="32" height="18" rx="6" fill="#C2CDD9"/>
     <path d="M100 108C141 108 153 140 151 166C148 199 127 213 100 213C73 213 52 199 49 166C47 140 59 108 100 108Z" fill="url(#bShell)" stroke="#A9B7C7" stroke-width="1.5"/>
@@ -552,6 +564,7 @@ async function startSession(session){
   S.myName = um.first_name || firstName(prof.full_name || prof.login);
   setAuthView(false); afterRole();
   try { await loadAll(); } catch (e){ console.warn(e); toast('Деректер жүктелмеді. Бетті жаңартып көр.'); }
+  showHello();
 }
 
 /* ---------- boot ---------- */
@@ -1189,6 +1202,18 @@ function paintThemeBtn(){ const d = isDark(); $('#themeBtn').innerHTML = d
 $('#themeBtn').addEventListener('click', () => { const t = isDark() ? 'light' : 'dark'; document.documentElement.setAttribute('data-theme', t); try { localStorage.setItem('levelup-theme', t); } catch {} paintThemeBtn(); });
 matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', paintThemeBtn);
 paintThemeBtn();
+function showHello(){
+  if (S.role !== 'student' || !S.uid || S.preview) return;
+  const key = 'levelup-hello-' + S.uid, d = today();
+  try { if (localStorage.getItem(key) === d) return; localStorage.setItem(key, d); } catch {}
+  const name = (S.me && (S.me.first || firstName(S.me.name))) || '';
+  const box = document.createElement('div'); box.className = 'hello'; box.setAttribute('role', 'dialog'); box.setAttribute('aria-label', 'NOVA сәлемдесуі');
+  box.innerHTML = `${bot('wave')}<div><h3>Сәлем${name ? ', ' + esc(name) : ''}!</h3><p>Күніңе сәттілік! Сенің қолыңнан келеді. 140 балл алуыңа тілектеспін!</p><button class="btn primary sm" type="button">Рахмет, NOVA!</button></div>`;
+  document.body.appendChild(box);
+  const close = () => { box.style.transition = 'opacity .3s'; box.style.opacity = '0'; setTimeout(() => box.remove(), 300); };
+  box.querySelector('button').addEventListener('click', close);
+  setTimeout(() => { if (box.isConnected) close(); }, 12000);
+}
 let qSeq = 0;
 function addQ(){
   const box = $('#qBlocks'); if (!box) return;
