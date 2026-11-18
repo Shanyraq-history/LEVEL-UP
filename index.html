@@ -288,8 +288,8 @@ img{max-width:100%}
   <button id="previewBtn" class="btn sm" hidden>Оқушы көрінісі</button>
   <button id="themeBtn" class="btn sm ghost themebtn" aria-label="Түнгі / күндізгі режим"></button>
   <button id="logoutBtn" class="btn sm ghost" hidden>Шығу</button>
-  <button class="greet" id="greet" aria-label="Робот X көмекшісін ашу">
-    <span class="gb"><b id="gTitle">Сәлем! Мен — Робот X</b><small id="gSub">Іске қосылып жатырмын…</small></span>
+  <button class="greet" id="greet" aria-label="NOVA көмекшісін ашу">
+    <span class="gb"><b id="gTitle">Сәлем! Мен — NOVA</b><small id="gSub">Іске қосылып жатырмын…</small></span>
     <span id="gBot"></span>
   </button>
 </header>
@@ -300,8 +300,8 @@ img{max-width:100%}
   <main id="main"></main>
 </div>
 
-<aside class="hpanel" id="hpanel" hidden aria-label="Робот X көмекшісі">
-  <header><span id="hpBot"></span><span><b>Робот X</b><small>LEVEL UP көмекшісі</small></span><button id="hpClose" aria-label="Жабу">×</button></header>
+<aside class="hpanel" id="hpanel" hidden aria-label="NOVA көмекшісі">
+  <header><span id="hpBot"></span><span><b>NOVA</b><small>LEVEL UP көмекшісі</small></span><button id="hpClose" aria-label="Жабу">×</button></header>
   <div class="hmsgs" id="hmsgs"></div>
   <form class="hform" id="hform" hidden><input id="hq" placeholder="Сұрағыңды жаз…" autocomplete="off"><button class="btn primary sm">Жіберу</button></form>
 </aside>
@@ -342,7 +342,7 @@ function bot(cls = ''){
     <rect x="84" y="96" width="32" height="18" rx="6" fill="#C2CDD9"/>
     <path d="M100 108C141 108 153 140 151 166C148 199 127 213 100 213C73 213 52 199 49 166C47 140 59 108 100 108Z" fill="url(#bShell)" stroke="#A9B7C7" stroke-width="1.5"/>
     <path d="M53 170L82 174L85 181H115L118 174L147 170" fill="none" stroke="#A9B7C7" stroke-width="2" stroke-linejoin="round"/>
-    <text x="100" y="152" text-anchor="middle" font-family="Unbounded,Rubik,sans-serif" font-weight="700" font-size="22" fill="#2CC3DE">X</text>
+    <text x="100" y="152" text-anchor="middle" font-family="Unbounded,Rubik,sans-serif" font-weight="700" font-size="15" letter-spacing="1" fill="#2CC3DE">NOVA</text>
     <ellipse cx="76" cy="134" rx="8" ry="15" fill="#FFFFFF" opacity=".75" transform="rotate(28 76 134)"/>
     <rect x="28" y="44" width="18" height="36" rx="9" fill="#D3DCE6" stroke="#A9B7C7" stroke-width="1.5"/>
     <rect x="154" y="44" width="18" height="36" rx="9" fill="#D3DCE6" stroke="#A9B7C7" stroke-width="1.5"/>
@@ -512,7 +512,7 @@ function renderAuth(){
   }
   $('#auth').innerHTML = `<div class="reg authcard">${bot()}<form id="authForm" style="display:grid;gap:10px" novalidate>
     <p class="eyebrow" style="color:var(--glow)">LEVEL UP · ${reg ? 'тіркелу' : 'кіру'}</p>
-    <h2>${reg ? 'Сәлем! Мен — Робот X. Тіркелейік.' : 'Сәлем! Қайта келгеніңе қуаныштымын.'}</h2>
+    <h2>${reg ? 'Сәлем! Мен — NOVA. Тіркелейік.' : 'Сәлем! Қайта келгеніңе қуаныштымын.'}</h2>
     <div class="authtabs" role="tablist"><button type="button" data-auth="login" class="${reg ? '' : 'on'}">Кіру</button><button type="button" data-auth="register" class="${reg ? 'on' : ''}">Тіркелу</button></div>
     ${reg ? `<div class="row2"><label class="f">Тегі<input id="aLast" required maxlength="40" autocomplete="family-name"></label><label class="f">Аты<input id="aFirst" required maxlength="40" autocomplete="given-name"></label></div>
     <label class="f">Поток<input id="aGroup" maxlength="40" placeholder="Мысалы: 01, 11"></label>` : ''}
@@ -577,13 +577,13 @@ function afterRole(){
 function renderGreet(){
   const t = pubTasks(today()); const m = MY();
   const done = t.filter(x => m.tasks?.[x.id]?.done).length;
-  let title = 'Сәлем! Мен — Робот X', sub = 'Іске қосылып жатырмын…';
+  let title = 'Сәлем! Мен — NOVA', sub = 'Іске қосылып жатырмын…';
   if (S.role === 'guest'){ sub = 'Кіру үшін claude.ai аккаунты керек'; }
   else if (S.role === 'curator' && !S.preview){ title = `Сәлем, ${S.myName || 'куратор'}!`; sub = `Бүгін ${t.length} тапсырма · ${Object.keys(S.students).length} оқушы`; }
   else if (S.preview){ title = 'Сәлем, оқушы!'; sub = `Бүгін: ${done}/${t.length} орындалды`; }
   else if (S.role === 'student'){
     if (!S.meLoaded) {}
-    else if (!S.me){ title = 'Сәлем! Мен — Робот X'; sub = 'Танысайық: атыңды жаз'; }
+    else if (!S.me){ title = 'Сәлем! Мен — NOVA'; sub = 'Танысайық: атыңды жаз'; }
     else { title = `Сәлем, ${S.me.first || firstName(S.me.name)}!`; sub = t.length ? (done === t.length ? 'Бүгінгі жоспар орындалды!' : `Бүгін: ${done}/${t.length} орындалды`) : 'Бүгінге тапсырма әзірге жоқ'; }
   }
   $('#gTitle').textContent = title; $('#gSub').textContent = sub;
@@ -652,7 +652,7 @@ function renderShell(){
   if (needsReg()){
     html += `<section class="reg">${bot()}<form id="regForm" style="display:grid;gap:10px">
       <p class="eyebrow" style="color:var(--glow)">LEVEL UP · тіркелу</p>
-      <h2>Сәлем! Мен — Робот X, сенің оқу көмекшің.</h2>
+      <h2>Сәлем! Мен — NOVA, сенің оқу көмекшің.</h2>
       <p>Танысайық. Атың мен тобыңды жаз, сонда күндік жоспарың ашылады және куратор нәтижеңді көреді.</p>
       <label class="f">Аты-жөні<input id="rName" required maxlength="60" autocomplete="name"></label>
       <label class="f">Поток<input id="rGroup" maxlength="40" placeholder="Мысалы: 01, 11"></label>
@@ -950,7 +950,7 @@ function renderHelper(){
   const tip = TIPS[r][key] || TIPS[r].plan;
   const where = S.view === 'subject' ? `${subjName(S.subject) || 'Пән'} · ${cs0 ? cs0.name : ''}` : (S.view === 'students' ? 'Оқушылар' : 'Күндік жоспар');
   const msgs = $('#hmsgs');
-  msgs.innerHTML = `<div class="msg bot">Сәлем! Мен — Робот X. Қазір сен «${esc(where)}» бөліміндесің. ${esc(tip)}</div>` + S.chat.map(m => `<div class="msg ${m.me?'me':'bot'}">${esc(m.text)}</div>`).join('');
+  msgs.innerHTML = `<div class="msg bot">Сәлем! Мен — NOVA. Қазір сен «${esc(where)}» бөліміндесің. ${esc(tip)}</div>` + S.chat.map(m => `<div class="msg ${m.me?'me':'bot'}">${esc(m.text)}</div>`).join('');
   $('#hform').hidden = !S.sample;
   msgs.scrollTop = msgs.scrollHeight;
 }
@@ -962,9 +962,9 @@ $('#hform').addEventListener('submit', async e => {
   $('#hq').value = '';
   S.chat.push({ me:true, text:q }); const ans = { text:'Ойланып жатырмын…' }; S.chat.push(ans); renderHelper();
   const bubble = $('#hmsgs').lastElementChild;
-  const hist = S.chat.slice(-8, -1).map(m => (m.me ? 'Пайдаланушы: ' : 'Робот X: ') + m.text).join('\n');
+  const hist = S.chat.slice(-8, -1).map(m => (m.me ? 'Пайдаланушы: ' : 'NOVA: ') + m.text).join('\n');
   const where = S.view === 'subject' ? `${subjName(S.subject)}, ${(curSec() || {}).name || ''}` : 'Күндік жоспар';
-  const prompt = `Сен — Робот X, LEVEL UP атты оқу платформасының мейірімді робот-көмекшісісің. Платформадағы пәндер: ${subjects().map(s=>s.name).join(', ')}. Пайдаланушы: ${S.role==='curator'?'куратор':'оқушы'}. Ағымдағы бөлім: ${where}. Тек қазақ тілінде, қысқа (5 сөйлемге дейін), түсінікті жауап бер. Оқушыға дайын жауапты бірден берме, ойлануға бағытта.\n\nСөйлесу:\n${hist}\n\nЖаңа сұрақ: ${q}`;
+  const prompt = `Сен — NOVA, LEVEL UP атты оқу платформасының мейірімді робот-көмекшісісің. Платформадағы пәндер: ${subjects().map(s=>s.name).join(', ')}. Пайдаланушы: ${S.role==='curator'?'куратор':'оқушы'}. Ағымдағы бөлім: ${where}. Тек қазақ тілінде, қысқа (5 сөйлемге дейін), түсінікті жауап бер. Оқушыға дайын жауапты бірден берме, ойлануға бағытта.\n\nСөйлесу:\n${hist}\n\nЖаңа сұрақ: ${q}`;
   try {
     const res = await S.sample(prompt, { modelTier:'quick', cache:false, onText: ({ text }) => { ans.text = text; bubble.textContent = text; } });
     ans.text = res.text; bubble.textContent = res.text;
