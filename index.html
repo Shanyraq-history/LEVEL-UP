@@ -512,7 +512,7 @@ function renderAuth(){
   }
   $('#auth').innerHTML = `<div class="reg authcard">${bot()}<form id="authForm" style="display:grid;gap:10px" novalidate>
     <p class="eyebrow" style="color:var(--glow)">LEVEL UP · ${reg ? 'тіркелу' : 'кіру'}</p>
-    <h2>${reg ? 'Сәлем! Мен — NOVA. Тіркелейік.' : 'Сәлем! Қайта келгеніңе қуаныштымын.'}</h2>
+    <h2>${reg ? 'Сәлем! Мен — NOVA. Сайтқа тіркеле ғой.' : 'Сәлем! Қайта келгеніңе қуаныштымын.'}</h2>
     <div class="authtabs" role="tablist"><button type="button" data-auth="login" class="${reg ? '' : 'on'}">Кіру</button><button type="button" data-auth="register" class="${reg ? 'on' : ''}">Тіркелу</button></div>
     ${reg ? `<div class="row2"><label class="f">Тегі<input id="aLast" required maxlength="40" autocomplete="family-name"></label><label class="f">Аты<input id="aFirst" required maxlength="40" autocomplete="given-name"></label></div>
     <label class="f">Поток<input id="aGroup" maxlength="40" placeholder="Мысалы: 01, 11"></label>` : ''}
