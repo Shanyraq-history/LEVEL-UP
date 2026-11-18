@@ -269,6 +269,8 @@ img{max-width:100%}
 .authtabs button{flex:1;border:0;background:none;color:#9FB6CB;padding:8px;border-radius:9px;font-weight:500;cursor:pointer}
 .authtabs button.on{background:var(--glow);color:#06202B}
 .greet{margin-left:0}
+#pills{display:none}
+@media (max-width:820px){#pills{display:flex}}
 .pills .addpill{border-style:dashed;color:var(--accent);background:transparent}
 .themebtn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 @media (max-width:560px){.themebtn span{display:none}}
@@ -677,7 +679,7 @@ function renderShell(){
     const tb = curSec(), sid = S.subject;
     S.shellKey = tb ? `${sid}:${tb.id}:${tb.kind}` : `${sid}:none`;
     html += `<section class="vhead"><div><p class="eyebrow">Пән</p><h1 id="subjTitle">${esc(subjName(sid) || '…')}</h1><p class="lead">${esc(tb ? tb.lead : 'Бұл пәнде әзірге бөлім жоқ.')}</p></div>
-      ${r==='curator' ? `<div class="actions">${tb ? `<button class="btn sm ghost" data-act="ren-sec">Бөлім атын өзгерту</button><button class="btn sm ghost danger" data-act="del-sec">Бөлімді өшіру</button>` : ''}<button class="btn sm ghost danger" data-act="del-subj" data-id="${esc(sid)}">Пәнді өшіру</button></div>` : ''}</section>
+      ${r==='curator' ? `<div class="actions"><button class="btn sm" data-act="add-sec">+ Бөлім қосу</button>${tb ? `<button class="btn sm ghost" data-act="ren-sec">Бөлім атын өзгерту</button><button class="btn sm ghost danger" data-act="del-sec">Бөлімді өшіру</button>` : ''}<button class="btn sm ghost danger" data-act="del-subj" data-id="${esc(sid)}">Пәнді өшіру</button></div>` : ''}</section>
       <nav class="pills" id="pills" aria-label="Пән бөлімдері"></nav>`;
     if (r === 'curator' && S.secForm === 'add') html += `<form class="card composer" id="secForm"><h2>Жаңа бөлім</h2><div class="row"><label class="f">Бөлім атауы<input id="sName" required maxlength="40" placeholder="Мысалы: Тапсырмалар"></label>
       <label class="f">Түрі<select id="sKind">${Object.entries(KINDS).map(([k, v]) => `<option value="${k}">${esc(v.name)}</option>`).join('')}</select></label></div>
@@ -752,7 +754,6 @@ function renderData(){
     const cs = curSec();
     if (S.shellKey !== (cs ? `${S.subject}:${cs.id}:${cs.kind}` : `${S.subject}:none`)){ renderShell(); return; }
     const p = $('#pills'); if (p) p.innerHTML = secs(S.subject).map(tb => `<a href="#s-${esc(S.subject)}-${tb.id}" ${S.tab===tb.id ? 'aria-current="page"' : ''}>${esc(tb.name)}<span class="cnt">${tabCount(S.subject, tb.id)}</span></a>`).join('');
-    if (p && ROLE() === 'curator') p.innerHTML += `<a href="#" data-act="add-sec" class="addpill">+ Бөлім қосу</a>`;
     if (!cs){ const n = $('#noSec'); if (n) n.innerHTML = emptyBox(ROLE() === 'curator' ? 'Бұл пәнде бөлім жоқ. «+ Бөлім қосу» батырмасымен бөлім ашыңыз.' : 'Куратор бұл пәнге әлі бөлім қоспады.'); }
     else if (cs.kind === 'mat') renderMaterials();
     else if (cs.kind === 'check') renderChecklists();
