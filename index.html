@@ -1,0 +1,1122 @@
+<!doctype html>
+<html lang="kk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>LEVEL UP</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Rubik:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: robot-lab console. Silver shell + dark visor panels, cyan "eye" glow as the single accent. Sidebar nav, one working column. */
+:root{
+  --bg:#EDF1F5; --surface:#FFFFFF; --surface-2:#E2E8EF; --ink:#13243A; --muted:#566880; --line:#CDD6E1;
+  --visor:#0D2033; --visor-ink:#DDF7FC; --glow:#2CCFEA; --accent:#0A7A98; --on-accent:#FFFFFF;
+  --ok:#17875A; --ok-bg:#DDF3E8; --warn:#A8650A; --warn-bg:#FBEBD2; --bad:#B83A33; --bad-bg:#F8E0DE;
+  --dot:rgba(19,36,58,.07); --shadow:0 1px 2px rgba(19,36,58,.06),0 6px 20px rgba(19,36,58,.06);
+  --f-display:"Unbounded","Rubik",system-ui,sans-serif; --f-body:"Rubik",system-ui,-apple-system,"Segoe UI",sans-serif; --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  --r:14px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#08131F; --surface:#0F1F30; --surface-2:#152B42; --ink:#E4EDF6; --muted:#8DA1B7; --line:#21405D;
+  --visor:#050E18; --visor-ink:#DDF7FC; --glow:#3FDDF4; --accent:#3FD3EE; --on-accent:#06202B;
+  --ok:#4CD394; --ok-bg:#0F3326; --warn:#F0B055; --warn-bg:#3A2A10; --bad:#F27C73; --bad-bg:#3D1A18;
+  --dot:rgba(63,221,244,.08); --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#08131F; --surface:#0F1F30; --surface-2:#152B42; --ink:#E4EDF6; --muted:#8DA1B7; --line:#21405D;
+  --visor:#050E18; --visor-ink:#DDF7FC; --glow:#3FDDF4; --accent:#3FD3EE; --on-accent:#06202B;
+  --ok:#4CD394; --ok-bg:#0F3326; --warn:#F0B055; --warn-bg:#3A2A10; --bad:#F27C73; --bad-bg:#3D1A18;
+  --dot:rgba(63,221,244,.08); --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25); color-scheme:dark}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{background:var(--bg);color:var(--ink)}
+body{font-family:var(--f-body);font-size:15px;line-height:1.5;
+  background-image:radial-gradient(var(--dot) 1.2px,transparent 1.2px);background-size:22px 22px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;letter-spacing:-.01em}
+h1{font-size:clamp(1.35rem,3vw,1.8rem);font-weight:700}
+h2{font-size:1.1rem;font-weight:500}
+h3{font-size:.98rem;font-weight:500;font-family:var(--f-body);font-weight:600}
+p{margin:0}
+a{color:var(--accent)}
+button,input,textarea,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.eyebrow{font-family:var(--f-mono);font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.muted{color:var(--muted)}
+.num{font-variant-numeric:tabular-nums;font-family:var(--f-mono)}
+
+/* header */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-block:10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink);margin-right:auto}
+.brand svg{width:34px;height:38px}
+.brand b{font-family:var(--f-display);font-weight:700;font-size:1.05rem;letter-spacing:.02em}
+.brand small{display:block;font-family:var(--f-mono);font-size:.66rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+.chip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:4px 10px;font-size:.78rem;font-weight:500;background:var(--surface-2);color:var(--ink);border:1px solid var(--line);white-space:nowrap}
+.chip .led{width:7px;height:7px;border-radius:50%;background:var(--glow);box-shadow:0 0 6px var(--glow)}
+.chip.ok{background:var(--ok-bg);color:var(--ok);border-color:transparent}
+.chip.warn{background:var(--warn-bg);color:var(--warn);border-color:transparent}
+.chip.bad{background:var(--bad-bg);color:var(--bad);border-color:transparent}
+
+/* layout */
+.layout{display:grid;grid-template-columns:220px minmax(0,1fr);gap:28px;max-width:1180px;margin:0 auto;
+  padding-block:24px 120px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.side{position:sticky;top:calc(env(safe-area-inset-top,0px) + 76px);align-self:start;display:flex;flex-direction:column;gap:4px}
+.side a{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 12px;border-radius:10px;text-decoration:none;color:var(--ink);font-weight:500}
+.side a:hover{background:var(--surface-2)}
+.side a[aria-current="page"]{background:var(--visor);color:var(--visor-ink)}
+.side a[aria-current="page"] .cnt{color:var(--glow)}
+.side .cnt{font-family:var(--f-mono);font-size:.75rem;color:var(--muted)}
+.side .sep{height:1px;background:var(--line);margin:8px 4px}
+main{min-width:0;display:flex;flex-direction:column;gap:20px}
+@media (max-width:820px){
+  .layout{grid-template-columns:minmax(0,1fr);gap:16px;padding-top:12px}
+  .side{position:static;flex-direction:row;overflow-x:auto;gap:6px;padding-bottom:4px;scrollbar-width:none}
+  .side a{flex:0 0 auto;padding:7px 12px;border:1px solid var(--line);background:var(--surface)}
+  .side .sep{display:none}
+}
+
+/* view head */
+.vhead{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.vhead > div:first-child{display:flex;flex-direction:column;gap:6px;min-width:0}
+.vhead .lead{color:var(--muted);max-width:62ch}
+.datectl{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.datectl input{padding:7px 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+
+/* cards & forms */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;box-shadow:var(--shadow);min-width:0}
+.composer{display:grid;gap:12px;border-style:dashed;box-shadow:none;background:transparent}
+.composer .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+label.f{display:flex;flex-direction:column;gap:5px;font-size:.82rem;font-weight:500;color:var(--muted)}
+.f input,.f textarea,.f select,input.t{padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);width:100%;font-size:.95rem}
+.f textarea{min-height:76px;resize:vertical}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;padding:8px 14px;font-weight:500;cursor:pointer;text-decoration:none;font-size:.9rem;white-space:nowrap}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--muted)}
+.btn.ghost:hover{color:var(--ink);background:var(--surface-2)}
+.btn.sm{padding:5px 10px;font-size:.8rem}
+.btn.danger[data-armed]{background:var(--bad);border-color:var(--bad);color:#fff}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.list{display:flex;flex-direction:column;gap:12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.empty{border:1px dashed var(--line);border-radius:var(--r);padding:28px 20px;text-align:center;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:10px}
+.empty svg{width:64px;height:72px;opacity:.9}
+.banner{display:flex;gap:14px;align-items:center;background:var(--visor);color:var(--visor-ink);border-radius:var(--r);padding:16px 18px;flex-wrap:wrap}
+.banner .big{font-family:var(--f-display);font-size:1.4rem;color:var(--glow)}
+.banner .grow{flex:1 1 220px;min-width:0;display:flex;flex-direction:column;gap:2px}
+.banner .muted{color:#9FB6CB}
+.bar{height:6px;background:var(--surface-2);border-radius:99px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:99px}
+.banner .bar{background:rgba(255,255,255,.12)}
+.banner .bar i{background:var(--glow)}
+.tag{font-family:var(--f-mono);font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);border:1px solid currentColor;border-radius:6px;padding:1px 6px;text-decoration:none;white-space:nowrap}
+
+/* tasks */
+.task{display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:start}
+.task.is-done{border-color:color-mix(in srgb,var(--ok) 45%,var(--line))}
+.tick{appearance:none;width:30px;height:30px;border-radius:9px;border:2px solid var(--line);background:var(--surface);cursor:pointer;display:grid;place-items:center;margin:0;transition:background .15s,border-color .15s}
+.tick:checked{background:var(--ok);border-color:var(--ok)}
+.tick:checked::after{content:"";width:8px;height:14px;border:solid #fff;border-width:0 3px 3px 0;transform:rotate(45deg) translate(-1px,-2px)}
+.tick:disabled{cursor:not-allowed}
+.tbody{display:flex;flex-direction:column;gap:8px;min-width:0}
+.thead{display:flex;gap:8px;align-items:baseline;justify-content:space-between;flex-wrap:wrap}
+.tdesc{color:var(--muted);white-space:pre-wrap;overflow-wrap:anywhere}
+.meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:.82rem;color:var(--muted)}
+.proofs{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.proof{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:10px;padding:4px 6px 4px 4px;background:var(--surface-2);font-size:.8rem;max-width:100%;min-width:0}
+.proof img{width:38px;height:38px;object-fit:cover;border-radius:7px;display:block}
+.proof .fic{width:38px;height:38px;border-radius:7px;background:var(--visor);color:var(--glow);display:grid;place-items:center;font-family:var(--f-mono);font-size:.65rem}
+.proof a{color:var(--ink);text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:160px}
+.proof button{border:0;background:none;color:var(--muted);cursor:pointer;font-size:1rem;padding:0 4px}
+.upload{position:relative;overflow:hidden}
+.upload input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.who{display:grid;gap:6px;margin-top:4px;border-top:1px solid var(--line);padding-top:10px}
+.who-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
+.who-row .proofs{grid-column:1/-1}
+
+/* tables */
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:.9rem}
+th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{font-family:var(--f-mono);font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:500;background:var(--surface-2)}
+tbody tr{cursor:pointer}
+tbody tr:hover td{background:var(--surface-2)}
+tr.open td{background:color-mix(in srgb,var(--accent) 10%,var(--surface))}
+.mini{display:flex;align-items:center;gap:8px}
+.mini .bar{width:70px}
+
+/* checklists / tests */
+.cl-items{display:flex;flex-direction:column;gap:2px;margin-top:6px}
+.cl-items label{display:flex;gap:10px;align-items:flex-start;padding:7px 4px;border-radius:8px;cursor:pointer}
+.cl-items label:hover{background:var(--surface-2)}
+.cl-items input{width:18px;height:18px;accent-color:var(--ok);margin-top:2px;flex:0 0 auto}
+.cl-items .done span{text-decoration:line-through;color:var(--muted)}
+.q{display:flex;flex-direction:column;gap:6px;padding:12px 0;border-top:1px solid var(--line)}
+.q:first-child{border-top:0}
+.opt{display:flex;gap:10px;align-items:center;padding:7px 10px;border:1px solid var(--line);border-radius:10px;cursor:pointer}
+.opt input{accent-color:var(--accent)}
+.opt.right{border-color:var(--ok);background:var(--ok-bg)}
+.opt.wrong{border-color:var(--bad);background:var(--bad-bg)}
+.qb{display:grid;gap:8px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.qb .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px}
+.qb .opts label{display:flex;gap:8px;align-items:center}
+.score{font-family:var(--f-display);font-size:1.6rem;color:var(--accent)}
+
+/* robot */
+.bot .bot-float{animation:float 4s ease-in-out infinite;transform-origin:center}
+.bot .bot-eyes{animation:blink 5s infinite;transform-origin:100px 62px}
+.bot .bot-shadow{animation:shadow 4s ease-in-out infinite;transform-origin:100px 222px}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+@keyframes shadow{0%,100%{transform:scaleX(1);opacity:.35}50%{transform:scaleX(.82);opacity:.22}}
+@keyframes blink{0%,94%,100%{transform:scaleY(1)}96%{transform:scaleY(.1)}}
+
+/* subject nav */
+.side .navh{font-family:var(--f-mono);font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);padding:12px 12px 4px}
+.side .sub{display:flex;flex-direction:column;gap:2px;margin:2px 0 6px 14px;padding-left:10px;border-left:2px solid var(--glow)}
+.side .sub a{padding:6px 10px;font-weight:400;font-size:.9rem}
+.side .sub a[aria-current="page"]{background:var(--surface-2);color:var(--ink);font-weight:500}
+.side .sub a[aria-current="page"] .cnt{color:var(--accent)}
+.side a.subj-on{background:var(--surface-2)}
+.side .addsub{display:flex;gap:6px;padding:6px 4px}
+.side .addsub input{flex:1;min-width:0;padding:6px 9px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+.pills{display:flex;gap:6px;flex-wrap:wrap}
+.pills a{display:inline-flex;gap:6px;align-items:center;padding:7px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);text-decoration:none;font-weight:500;font-size:.88rem}
+.pills a[aria-current="page"]{background:var(--visor);color:var(--visor-ink);border-color:var(--visor)}
+.pills .cnt{font-family:var(--f-mono);font-size:.72rem;opacity:.75}
+@media (max-width:820px){ .side .sub,.side .navh,.side .addsub{display:none} }
+
+/* corner robot greeting */
+.greet{display:flex;align-items:center;gap:10px;margin-left:auto;border:0;background:none;cursor:pointer;padding:0;color:inherit;text-align:left}
+.greet .gb{position:relative;background:var(--visor);color:var(--visor-ink);border-radius:14px;border-top-right-radius:4px;padding:7px 12px;max-width:260px;
+  box-shadow:0 0 0 1px rgba(63,221,244,.25);animation:pop .5s ease-out both}
+.greet .gb b{display:block;font-family:var(--f-display);font-weight:500;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.greet .gb small{display:block;color:#9FB6CB;font-size:.74rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.greet svg{width:44px;height:50px;flex:0 0 auto}
+@keyframes pop{from{opacity:0;transform:translateX(8px) scale(.96)}to{opacity:1;transform:none}}
+@media (max-width:520px){ .greet .gb small{display:none} .greet .gb{max-width:150px} }
+.hpanel{position:fixed;right:max(16px,env(safe-area-inset-right,0px));top:calc(env(safe-area-inset-top,0px) + 74px);z-index:31;
+  width:min(360px,calc(100vw - 32px));max-height:min(520px,calc(100vh - 110px));display:flex;flex-direction:column;
+  background:var(--surface);border:1px solid var(--line);border-radius:18px;box-shadow:0 18px 50px rgba(10,30,50,.25);overflow:hidden}
+.hpanel header{display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--visor);color:var(--visor-ink)}
+.hpanel header svg{width:36px;height:40px}
+.hpanel header b{font-family:var(--f-display);font-weight:500}
+.hpanel header small{display:block;color:#9FB6CB;font-size:.75rem}
+.hpanel header button{margin-left:auto;background:none;border:0;color:var(--visor-ink);font-size:1.3rem;cursor:pointer}
+.hmsgs{padding:14px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;flex:1}
+.msg{padding:9px 12px;border-radius:12px;max-width:90%;white-space:pre-wrap;overflow-wrap:anywhere;font-size:.9rem}
+.msg.bot{background:var(--surface-2);align-self:flex-start;border-bottom-left-radius:4px}
+.msg.me{background:var(--accent);color:var(--on-accent);align-self:flex-end;border-bottom-right-radius:4px}
+.hform{display:flex;gap:8px;padding:10px;border-top:1px solid var(--line)}
+.hform input{flex:1;min-width:0;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.reg{display:grid;grid-template-columns:auto minmax(0,1fr);gap:20px;align-items:center;background:var(--visor);color:var(--visor-ink);border-radius:var(--r);padding:20px}
+.reg svg{width:110px;height:126px}
+.reg h2{color:#fff}
+.reg p{color:#BFD2E3}
+.reg .f{color:#9FB6CB}
+.reg .f input{background:#0F2A40;border-color:#2B5170;color:#fff}
+.reg .btn.primary{background:var(--glow);border-color:var(--glow);color:#06202B}
+.reg .err{color:#FFB4AC;font-size:.85rem}
+@media (max-width:560px){ .reg{grid-template-columns:minmax(0,1fr)} .reg svg{width:80px;height:92px} }
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(24px + env(safe-area-inset-bottom,0px));z-index:60;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:.9rem;max-width:calc(100vw - 32px)}
+.preview-bar{background:var(--warn-bg);color:var(--warn);border-radius:12px;padding:10px 14px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;font-weight:500}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* dark sidebar panel */
+.side{background:#0D1826;border:1px solid #1C2E44;border-radius:18px;padding:10px 8px 14px;gap:2px;
+  max-height:calc(100vh - 100px);overflow-y:auto;scrollbar-width:thin}
+.side .navh{font-family:var(--f-body);font-size:.92rem;letter-spacing:0;text-transform:none;color:#7C8FA6;padding:16px 14px 8px;margin:0}
+.side .navh:first-child{padding-top:8px}
+.side a,.side .naddbtn{display:flex;align-items:center;gap:14px;padding:11px 14px;border-radius:14px;color:#E3EBF4;font-weight:400;font-size:1rem;text-decoration:none}
+.side .naddbtn{border:0;background:none;cursor:pointer;width:100%;text-align:left;font-family:inherit;color:#7C8FA6;font-size:.9rem;padding:8px 14px}
+.side .naddbtn:hover{color:#E3EBF4}
+.side a:hover{background:rgba(255,255,255,.06)}
+.side .ni{width:22px;height:22px;flex:0 0 auto;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.side .nl{flex:1;min-width:0}
+.side a[aria-current="page"],.side a.subj-on{background:rgba(63,221,244,.14);color:#5FE3F8}
+.side a[aria-current="page"] .cnt{color:#5FE3F8}
+.side .badge{min-width:26px;height:26px;padding:0 7px;border-radius:999px;background:#2CCFEA;color:#06202B;display:inline-grid;place-items:center;font-size:.8rem;font-weight:500;box-shadow:0 0 0 2px #0D1826,0 0 10px rgba(44,207,234,.45)}
+.side .sub{margin:4px 0 8px 24px;padding-left:12px;border-left:1.5px solid #24425F}
+.side .sub a{padding:8px 12px;font-size:.92rem;color:#B9C8D8;border-radius:10px}
+.side .sub a[aria-current="page"]{background:rgba(255,255,255,.08);color:#FFFFFF;font-weight:500}
+.side .sub .cnt{font-family:var(--f-mono);font-size:.72rem;color:#7C8FA6}
+.side .nempty{color:#7C8FA6;padding:4px 14px;font-size:.85rem}
+.side .addsub input{background:#13243A;border-color:#24425F;color:#fff}
+@media (max-width:820px){
+  .side{flex-direction:row;overflow-x:auto;max-height:none;padding:6px;border-radius:14px;gap:4px}
+  .side .navh,.side .sub,.side .naddbtn,.side .addsub,.side .nempty{display:none}
+  .side a{flex:0 0 auto;padding:8px 12px;gap:8px;font-size:.9rem;border:0;background:none}
+  .side .ni{width:18px;height:18px}
+  .side .badge{min-width:20px;height:20px;font-size:.7rem;padding:0 5px}
+}
+@media (max-width:560px){ .brand small{display:none} .top{gap:8px} .greet svg{width:36px;height:42px} }
+
+/* standalone site */
+html,body{margin:0}
+body{font-size:15px}
+img{max-width:100%}
+.top{padding-top:calc(10px + env(safe-area-inset-top,0px))}
+.authwrap{min-height:calc(100vh - 80px);display:grid;place-items:center;padding-block:32px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.authcard{max-width:640px;width:100%}
+.authtabs{display:flex;gap:4px;background:#0F2A40;border-radius:12px;padding:4px}
+.authtabs button{flex:1;border:0;background:none;color:#9FB6CB;padding:8px;border-radius:9px;font-weight:500;cursor:pointer}
+.authtabs button.on{background:var(--glow);color:#06202B}
+.greet{margin-left:0}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <a class="brand" href="#plan" aria-label="LEVEL UP: күндік жоспар">
+    <span id="brandMark"></span>
+    <span><b>LEVEL UP</b><small>IT · оқу платформасы</small></span>
+  </a>
+  <button id="previewBtn" class="btn sm" hidden>Оқушы көрінісі</button>
+  <button id="logoutBtn" class="btn sm ghost" hidden>Шығу</button>
+  <button class="greet" id="greet" aria-label="Робот X көмекшісін ашу">
+    <span class="gb"><b id="gTitle">Сәлем! Мен — Робот X</b><small id="gSub">Іске қосылып жатырмын…</small></span>
+    <span id="gBot"></span>
+  </button>
+</header>
+
+<section class="authwrap" id="auth" hidden></section>
+<div class="layout">
+  <nav class="side" id="nav" aria-label="Бөлімдер мен пәндер"></nav>
+  <main id="main"></main>
+</div>
+
+<aside class="hpanel" id="hpanel" hidden aria-label="Робот X көмекшісі">
+  <header><span id="hpBot"></span><span><b>Робот X</b><small>LEVEL UP көмекшісі</small></span><button id="hpClose" aria-label="Жабу">×</button></header>
+  <div class="hmsgs" id="hmsgs"></div>
+  <form class="hform" id="hform" hidden><input id="hq" placeholder="Сұрағыңды жаз…" autocomplete="off"><button class="btn primary sm">Жіберу</button></form>
+</aside>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+/* ---------- helpers ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad = n => String(n).padStart(2, '0');
+const ymd = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const today = () => ymd(new Date());
+const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const MONTHS = ['қаңтар','ақпан','наурыз','сәуір','мамыр','маусым','шілде','тамыз','қыркүйек','қазан','қараша','желтоқсан'];
+const DAYS = ['жексенбі','дүйсенбі','сейсенбі','сәрсенбі','бейсенбі','жұма','сенбі'];
+function parseD(s){ const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); }
+function fmtDate(s){ const d = parseD(s); return `${d.getDate()} ${MONTHS[d.getMonth()]}, ${DAYS[d.getDay()]}`; }
+function fmtTime(ms){ const d = new Date(ms); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; }
+function fmtDT(ms){ const d = new Date(ms); return `${d.getDate()} ${MONTHS[d.getMonth()]}, ${fmtTime(ms)}`; }
+function endOf(s){ const d = parseD(s); d.setHours(23,59,59,999); return d.getTime(); }
+function shiftDate(s, n){ const d = parseD(s); d.setDate(d.getDate()+n); return ymd(d); }
+const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
+const firstName = n => String(n || '').trim().split(/\s+/)[0] || '';
+function deepMerge(t, p){ for (const k in p){ const v = p[k]; if (v && typeof v === 'object' && !Array.isArray(v)){ if (!t[k] || typeof t[k] !== 'object' || Array.isArray(t[k])) t[k] = {}; deepMerge(t[k], v); } else t[k] = v; } return t; }
+let toastT; function toast(msg){ const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 3200); }
+
+/* ---------- robot mascot (original drawing) ---------- */
+function bot(cls = ''){
+  return `<svg class="bot ${cls}" viewBox="0 0 200 230" aria-hidden="true">
+  <defs>
+    <linearGradient id="bShell" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#C6D1DD"/></linearGradient>
+    <radialGradient id="bVisor" cx=".45" cy=".35" r=".8"><stop offset="0" stop-color="#1E3F5E"/><stop offset="1" stop-color="#081624"/></radialGradient>
+  </defs>
+  <ellipse class="bot-shadow" cx="100" cy="222" rx="38" ry="5" fill="#7F93A8" opacity=".35"/>
+  <g class="bot-float">
+    <rect x="30" y="118" width="22" height="62" rx="11" fill="url(#bShell)" stroke="#A9B7C7" stroke-width="1.5" transform="rotate(14 41 118)"/>
+    <rect x="148" y="118" width="22" height="62" rx="11" fill="url(#bShell)" stroke="#A9B7C7" stroke-width="1.5" transform="rotate(-14 159 118)"/>
+    <rect x="84" y="96" width="32" height="18" rx="6" fill="#C2CDD9"/>
+    <path d="M100 108C141 108 153 140 151 166C148 199 127 213 100 213C73 213 52 199 49 166C47 140 59 108 100 108Z" fill="url(#bShell)" stroke="#A9B7C7" stroke-width="1.5"/>
+    <path d="M53 170L82 174L85 181H115L118 174L147 170" fill="none" stroke="#A9B7C7" stroke-width="2" stroke-linejoin="round"/>
+    <text x="100" y="152" text-anchor="middle" font-family="Unbounded,Rubik,sans-serif" font-weight="700" font-size="22" fill="#2CC3DE">X</text>
+    <ellipse cx="76" cy="134" rx="8" ry="15" fill="#FFFFFF" opacity=".75" transform="rotate(28 76 134)"/>
+    <rect x="28" y="44" width="18" height="36" rx="9" fill="#D3DCE6" stroke="#A9B7C7" stroke-width="1.5"/>
+    <rect x="154" y="44" width="18" height="36" rx="9" fill="#D3DCE6" stroke="#A9B7C7" stroke-width="1.5"/>
+    <rect x="78" y="10" width="44" height="16" rx="8" fill="#D3DCE6" stroke="#A9B7C7" stroke-width="1.5"/>
+    <rect x="40" y="20" width="120" height="84" rx="34" fill="url(#bShell)" stroke="#A9B7C7" stroke-width="1.5"/>
+    <rect x="52" y="34" width="96" height="58" rx="22" fill="url(#bVisor)"/>
+    <path d="M62 44Q70 38 86 38" stroke="#FFFFFF" stroke-opacity=".18" stroke-width="4" stroke-linecap="round" fill="none"/>
+    <g class="bot-eyes">
+      <path d="M71 66a10 10 0 0 1 20 0z" fill="#3FE3F7"/>
+      <path d="M109 66a10 10 0 0 1 20 0z" fill="#3FE3F7"/>
+    </g>
+    <path d="M92 75h16a8 8 0 0 1-16 0z" fill="#3FE3F7"/>
+  </g></svg>`;
+}
+
+/* ---------- structure ---------- */
+const TABS = [
+  { id:'analysis', name:'Нұсқа талдау', mat:true, lead:'Нұсқалардың талдауы: есептің шешімі және жиі кездесетін қателер.', ph:'Мысалы: 2025 жыл, 3-нұсқа, 1–10 есептер' },
+  { id:'checklists', name:'Чек-листтер', lead:'Қадамдық тізімдер: әр пунктті орындаған сайын белгі қой.' },
+  { id:'books', name:'Кітаптар', mat:true, lead:'Осы пән бойынша оқитын кітаптар мен оқулықтар.', ph:'Мысалы: Оқулық, 1–3 тараулар' },
+  { id:'practicum', name:'Практикум', mat:true, lead:'Практикалық жұмыстар мен есептер жинағы.', ph:'Мысалы: 20 есептен тұратын жаттығу' },
+  { id:'tests', name:'Тесттер', lead:'Білімді тексеру. Нәтиже бірден шығады және куратор оны көреді.' },
+];
+const TAB = Object.fromEntries(TABS.map(t => [t.id, t]));
+const TIPS = {
+  student: {
+    plan:'Бүгінгі тапсырмаларды кеш соңына дейін (23:59) орында. Орындаған соң шаршыға белгі қой да, «Дәлел жүктеу» батырмасымен скриншот, фото немесе файл сал. Куратор оны бірден көреді.',
+    analysis:'Нұсқа талдауды оқып, шешімді өз бетіңше қайталап шық. Қатені түсіну — деңгейді көтерудің ең жылдам жолы.',
+    checklists:'Әр пунктті орындаған сайын белгі қой. Прогресс автоматты түрде сақталады.',
+    books:'Кітапты ашып оқы. Жоспарда кітапқа сілтеме болса, сол тарауды оқып шық.',
+    practicum:'Практикумды орындап, нәтижесін жоспардағы тапсырмаға дәлел ретінде жүкте.',
+    tests:'Тестті «Бастау» батырмасымен аш, жауаптарды белгілеп «Тапсыру» бас. Нәтижеңді куратор көреді.',
+  },
+  curator: {
+    plan:'Тапсырманы жазып «Жариялау» бас, сол сәтте оны барлық оқушы көреді. Әлі дайын емес болса, «Жоба ретінде сақтау» бас: жобаны оқушылар көрмейді.',
+    analysis:'Нұсқа талдауды мәтін, сілтеме немесе PDF түрінде қос. Ол тек осы пәннің ішінде шығады.',
+    checklists:'Чек-лист жасау үшін әр пунктті жаңа жолдан жаз. Әр оқушының прогресін осында көресің.',
+    books:'Кітап қосу үшін атауын, сипаттамасын, сілтемесін немесе файлын енгіз.',
+    practicum:'Практикалық жұмыстың шартын жаз. Оқушылар нәтижені жоспар арқылы тапсырады.',
+    tests:'Тест құрастыру: сұрақ, 4 нұсқа және дұрыс жауапты белгіле. Нәтижелер әр тесттің астында шығады.',
+    students:'Оқушыны басып, оның барлық мәліметін аш: күндік тапсырмалар, дәлелдер, чек-листтер, тесттер.',
+  }
+};
+
+/* ---------- state ---------- */
+const S = {
+  role:'loading', preview:false, uid:null, db:null, user:null, assets:null, sample:null, myName:'',
+  subjects:[], tasks:[], drafts:[], materials:[], checklists:[], tests:[], students:{}, progress:{},
+  me:null, meLoaded:false, my:null, previewMy:{tasks:{},checks:{},tests:{}},
+  date: today(), view:'plan', subject:null, tab:'analysis', openStudent:null, openTasks:{}, uploading:{}, testOpen:null, testDraft:{},
+  ro:false, addingSubject:false, chat:[],
+};
+const ROLE = () => (S.preview || S.role === 'guest' || S.role === 'loading') ? 'student' : S.role;
+const RO = () => S.preview || S.role === 'guest' || S.role === 'loading' || S.role === 'anon' || S.ro;
+const MY = () => S.preview ? S.previewMy : (S.my || {tasks:{},checks:{},tests:{}});
+const studentList = () => Object.values(S.students).sort((a,b) => (a.name||'').localeCompare(b.name||'', 'kk'));
+const pubTasks = d => S.tasks.filter(t => t.date === d).sort((a,b) => (a.publishedAt||0) - (b.publishedAt||0));
+const subjects = () => [...S.subjects].sort((a,b) => (a.order||0) - (b.order||0) || (a.createdAt||0) - (b.createdAt||0));
+const subjName = id => (S.subjects.find(s => s.id === id) || {}).name || '';
+const needsReg = () => false;
+
+/* ---------- Supabase data layer ---------- */
+const CFG = window.LEVELUP_CONFIG || {};
+const sb = (CFG.url && CFG.key && window.supabase) ? window.supabase.createClient(CFG.url, CFG.key) : null;
+const EMAIL_DOMAIN = 'levelup.example.com';
+const LOGIN_RE = /^[a-z0-9._-]{3,32}$/;
+const loginEmail = l => `${l}@${EMAIL_DOMAIN}`;
+const safeName = n => String(n || 'file').replace(/[^A-Za-z0-9._-]+/g, '_').slice(-80);
+const msOf = t => t ? new Date(t).getTime() : 0;
+async function q(p){ const { data, error } = await p; if (error) throw error; return data; }
+S.urls = {}; S.urlsAt = Date.now(); S.authMode = 'login';
+
+let chain = Promise.resolve(), pendingWrites = 0;
+function writeMy(patch){
+  if (RO()){
+    if (S.preview){ deepMerge(S.previewMy, patch); renderData(); toast('Алдын ала қарау режимі: өзгеріс сақталмайды'); }
+    else toast('Сақтау үшін жүйеге кір');
+    return Promise.resolve();
+  }
+  S.my = S.my || { tasks:{}, checks:{}, tests:{} };
+  deepMerge(S.my, JSON.parse(JSON.stringify(patch)));
+  renderData();
+  pendingWrites++;
+  chain = chain.then(async () => {
+    try { await q(sb.from('progress').upsert({ user_id:S.uid, data:S.my, updated_at:new Date().toISOString() })); }
+    catch (e){ console.warn(e); toast('Сақталмады. Интернетті тексеріп, қайталап көр.'); }
+    finally { pendingWrites--; }
+  });
+  return chain;
+}
+async function cur(fn, okMsg){
+  try { await fn(); await loadAll(); if (okMsg) toast(okMsg); }
+  catch (e){ console.warn(e); toast('Сақталмады: ' + (e && e.message ? e.message : 'қате')); }
+}
+async function dbDelete(col, id){
+  const table = col === 'drafts' ? 'tasks' : col;
+  if (table === 'materials'){ const m = S.materials.find(x => x.id === id); if (m && m.file){ try { await sb.storage.from('materials').remove([m.file.path]); } catch {} } }
+  return q(sb.from(table).delete().eq('id', id));
+}
+
+async function loadAll(){
+  if (!sb || !S.uid) return;
+  if (Date.now() - S.urlsAt > 3 * 3600e3){ S.urls = {}; S.urlsAt = Date.now(); }
+  const [subs, tasks, mats, cls, tests] = await Promise.all(['subjects','tasks','materials','checklists','tests'].map(t => q(sb.from(t).select('*'))));
+  S.subjects = subs.map(x => ({ id:x.id, name:x.name, order:x.ord, createdAt:msOf(x.created_at) }));
+  const tk = tasks.map(t => ({ id:t.id, title:t.title, desc:t.descr, subject:t.subject || '', section:t.section, date:t.date, published:t.published, publishedAt:msOf(t.published_at), createdAt:msOf(t.created_at) }));
+  S.tasks = tk.filter(t => t.published); S.drafts = tk.filter(t => !t.published);
+  S.materials = mats.map(m => ({ id:m.id, subject:m.subject, section:m.section, title:m.title, desc:m.descr, link:m.link, file: m.file_path ? { path:m.file_path, name:m.file_name } : null, createdAt:msOf(m.created_at) }));
+  S.checklists = cls.map(c => ({ id:c.id, subject:c.subject, title:c.title, items:c.items || [], createdAt:msOf(c.created_at) }));
+  S.tests = tests.map(t => ({ id:t.id, subject:t.subject, title:t.title, questions:t.questions || [], createdAt:msOf(t.created_at) }));
+  if (S.role === 'curator'){
+    const [profs, prog] = await Promise.all([q(sb.from('profiles').select('*').eq('role', 'student')), q(sb.from('progress').select('*'))]);
+    S.students = Object.fromEntries(profs.map(p => [p.id, { id:p.id, name:p.full_name || p.login, group:p.grp, login:p.login, joinedAt:msOf(p.created_at) }]));
+    S.progress = Object.fromEntries(prog.map(p => [p.user_id, p.data || {}]));
+  } else {
+    const rows = await q(sb.from('progress').select('*').eq('user_id', S.uid));
+    if (!pendingWrites) S.my = (rows[0] && rows[0].data) || { tasks:{}, checks:{}, tests:{} };
+  }
+  await signUrls();
+  renderData(); renderGreet();
+}
+async function signUrls(){
+  const need = { proofs:new Set(), materials:new Set() };
+  const addP = d => Object.values((d && d.tasks) || {}).forEach(tp => (tp.proofs || []).forEach(p => { if (p.path && !S.urls[p.path]) need.proofs.add(p.path); }));
+  if (S.role === 'curator') Object.values(S.progress).forEach(addP);
+  addP(S.my);
+  S.materials.forEach(m => { if (m.file && !S.urls['m:' + m.file.path]) need.materials.add(m.file.path); });
+  for (const bk of ['proofs', 'materials']){
+    const paths = [...need[bk]]; if (!paths.length) continue;
+    try {
+      const { data } = await sb.storage.from(bk).createSignedUrls(paths, 6 * 3600);
+      (data || []).forEach(x => { if (x.signedUrl) S.urls[(bk === 'materials' ? 'm:' : '') + x.path] = x.signedUrl; });
+    } catch (e){ console.warn(e); }
+  }
+}
+function fileUrl(bucket, path){ return (path && S.urls[(bucket === 'materials' ? 'm:' : '') + path]) || '#'; }
+
+/* ---------- auth ---------- */
+function setAuthView(on){
+  $('#auth').hidden = !on;
+  $('.layout').hidden = on;
+  $('#greet').hidden = on;
+  $('#logoutBtn').hidden = on;
+  if (on){ $('#previewBtn').hidden = true; $('#hpanel').hidden = true; }
+}
+function renderAuth(){
+  const reg = S.authMode === 'register';
+  if (!sb){
+    $('#auth').innerHTML = `<div class="reg authcard">${bot()}<div style="display:grid;gap:10px"><p class="eyebrow" style="color:var(--glow)">LEVEL UP · баптау</p><h2>Сайт әлі деректер базасына қосылмаған</h2><p>config.js файлына Supabase жобасының URL мекенжайы мен anon кілтін жазыңыз.</p></div></div>`;
+    return;
+  }
+  $('#auth').innerHTML = `<div class="reg authcard">${bot()}<form id="authForm" style="display:grid;gap:10px" novalidate>
+    <p class="eyebrow" style="color:var(--glow)">LEVEL UP · ${reg ? 'тіркелу' : 'кіру'}</p>
+    <h2>${reg ? 'Сәлем! Мен — Робот X. Тіркелейік.' : 'Сәлем! Қайта келгеніңе қуаныштымын.'}</h2>
+    <div class="authtabs" role="tablist"><button type="button" data-auth="login" class="${reg ? '' : 'on'}">Кіру</button><button type="button" data-auth="register" class="${reg ? 'on' : ''}">Тіркелу</button></div>
+    ${reg ? `<label class="f">Аты-жөні<input id="aName" required maxlength="60" autocomplete="name"></label>
+    <label class="f">Сынып / топ<input id="aGroup" maxlength="40" placeholder="Мысалы: 11А"></label>` : ''}
+    <label class="f">Логин<input id="aLogin" required autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="мысалы: ayaulym.s"></label>
+    <label class="f">Пароль<input id="aPass" type="password" required minlength="6" autocomplete="${reg ? 'new-password' : 'current-password'}"></label>
+    ${reg ? '<p style="font-size:.82rem">Логин: латын әріптері, сандар, нүкте немесе сызықша (3–32 таңба). Пароль кемінде 6 таңба. Оларды ұмытпа!</p>' : ''}
+    <p class="err" id="aErr" hidden></p>
+    <div class="actions"><button class="btn primary" id="aBtn">${reg ? 'Тіркелу' : 'Кіру'}</button></div></form></div>`;
+}
+function authErr(msg){ const el = $('#aErr'); el.textContent = msg; el.hidden = false; const b = $('#aBtn'); if (b){ b.disabled = false; b.textContent = S.authMode === 'register' ? 'Тіркелу' : 'Кіру'; } }
+function authMsg(e){
+  const m = String((e && e.message) || '').toLowerCase();
+  if (m === 'confirm') return 'Тіркелу сақталды, бірақ Supabase-те «Confirm email» әлі қосулы тұр. Куратор оны өшіргеннен кейін кіре аласың.';
+  if (m.includes('invalid login')) return 'Логин немесе пароль қате.';
+  if (m.includes('already')) return 'Бұл логин бос емес. Басқа логин таңда немесе «Кіру» бөлімін аш.';
+  if (m.includes('password')) return 'Пароль тым әлсіз. Кемінде 6 таңба жаз.';
+  if (m.includes('fetch') || m.includes('network')) return 'Серверге қосылу мүмкін болмады. Интернетті тексер.';
+  return 'Қате: ' + ((e && e.message) || 'белгісіз');
+}
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-auth]'); if (!t) return;
+  S.authMode = t.dataset.auth; renderAuth();
+});
+async function startSession(session){
+  if (!session){
+    Object.assign(S, { role:'anon', uid:null, profile:null, me:null, my:null, students:{}, progress:{}, preview:false, urls:{} });
+    setAuthView(true); renderAuth(); return;
+  }
+  S.uid = session.user.id;
+  let prof = null;
+  try { prof = (await q(sb.from('profiles').select('*').eq('id', S.uid)))[0]; } catch (e){ console.warn(e); }
+  if (!prof){ await sb.auth.signOut(); S.role = 'anon'; setAuthView(true); renderAuth(); authErr('Профиль табылмады. Куратормен байланыс.'); return; }
+  S.profile = prof;
+  S.role = prof.role === 'curator' ? 'curator' : 'student';
+  S.me = { name: prof.full_name || prof.login, group: prof.grp }; S.meLoaded = true;
+  S.myName = firstName(prof.full_name || prof.login);
+  setAuthView(false); afterRole();
+  try { await loadAll(); } catch (e){ console.warn(e); toast('Деректер жүктелмеді. Бетті жаңартып көр.'); }
+}
+
+/* ---------- boot ---------- */
+async function boot(){
+  $('#gBot').innerHTML = bot(); $('#hpBot').innerHTML = bot();
+  $('#brandMark').innerHTML = `<svg viewBox="0 0 40 40" width="34" height="34" aria-hidden="true"><rect x="2" y="6" width="36" height="28" rx="11" style="fill:var(--visor)"/><path d="M11 20a4 4 0 0 1 8 0z M21 20a4 4 0 0 1 8 0z" style="fill:var(--glow)"/><path d="M16 25h8a4 4 0 0 1-8 0z" style="fill:var(--glow)"/></svg>`;
+  route();
+  if (!sb){ S.role = 'anon'; setAuthView(true); renderAuth(); return; }
+  const { data } = await sb.auth.getSession();
+  await startSession(data.session);
+  sb.auth.onAuthStateChange((ev) => { if (ev === 'SIGNED_OUT' && S.uid) startSession(null); });
+  setInterval(() => { if (S.uid && !document.hidden) loadAll().catch(() => {}); }, 45000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && S.uid) loadAll().catch(() => {}); });
+}
+$('#logoutBtn').addEventListener('click', async () => { try { await sb.auth.signOut(); } catch {} startSession(null); });
+function afterRole(){
+  $('#previewBtn').hidden = S.role !== 'curator';
+  if (S.view === 'students' && ROLE() !== 'curator') location.hash = 'plan';
+  renderShell(); renderGreet(); renderHelper();
+}
+
+/* ---------- corner greeting ---------- */
+function renderGreet(){
+  const t = pubTasks(today()); const m = MY();
+  const done = t.filter(x => m.tasks?.[x.id]?.done).length;
+  let title = 'Сәлем! Мен — Робот X', sub = 'Іске қосылып жатырмын…';
+  if (S.role === 'guest'){ sub = 'Кіру үшін claude.ai аккаунты керек'; }
+  else if (S.role === 'curator' && !S.preview){ title = `Сәлем, ${S.myName || 'куратор'}!`; sub = `Бүгін ${t.length} тапсырма · ${Object.keys(S.students).length} оқушы`; }
+  else if (S.preview){ title = 'Сәлем, оқушы!'; sub = `Бүгін: ${done}/${t.length} орындалды`; }
+  else if (S.role === 'student'){
+    if (!S.meLoaded) {}
+    else if (!S.me){ title = 'Сәлем! Мен — Робот X'; sub = 'Танысайық: атыңды жаз'; }
+    else { title = `Сәлем, ${firstName(S.me.name)}!`; sub = t.length ? (done === t.length ? 'Бүгінгі жоспар орындалды!' : `Бүгін: ${done}/${t.length} орындалды`) : 'Бүгінге тапсырма әзірге жоқ'; }
+  }
+  $('#gTitle').textContent = title; $('#gSub').textContent = sub;
+}
+
+/* ---------- routing ---------- */
+function route(){
+  const h = (location.hash || '').slice(1);
+  const m = /^s-([a-z0-9]+)-([a-z]+)$/.exec(h);
+  if (m && TAB[m[2]]){ S.view = 'subject'; S.subject = m[1]; S.tab = m[2]; }
+  else if (h === 'students'){ S.view = 'students'; }
+  else { S.view = 'plan'; }
+  S.testOpen = null;
+}
+window.addEventListener('hashchange', () => { route(); renderShell(); renderHelper(); window.scrollTo({top:0}); });
+
+function tabCount(sid, tab){
+  if (TAB[tab].mat) return S.materials.filter(m => m.subject === sid && m.section === tab).length;
+  if (tab === 'checklists') return S.checklists.filter(c => c.subject === sid).length;
+  if (tab === 'tests') return S.tests.filter(c => c.subject === sid).length;
+  return '';
+}
+const ICONS = {
+  home:'<path d="M4 11.5 12 4l8 7.5V20a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1z"/>',
+  informatics:'<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M9 21h6M12 17v4M9.5 9 7.5 10.5 9.5 12M14.5 9l2 1.5-2 1.5"/>',
+  math:'<path d="M17 5H7l5.5 7L7 19h10"/>',
+  mathlit:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+  history:'<path d="M3 21h18M5 21V10M9.5 21V10M14.5 21V10M19 21V10M2.5 10 12 3.5 21.5 10z"/>',
+  book:'<path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM4 21V5M8 7h7"/>',
+  users:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M21.5 20a6.5 6.5 0 0 0-4-6"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+};
+const ico = k => `<svg class="ni" viewBox="0 0 24 24" aria-hidden="true">${ICONS[k] || ICONS.book}</svg>`;
+function renderNav(){
+  const r = ROLE(), t = pubTasks(today()), m = MY();
+  const left = r === 'curator' ? t.length : t.filter(x => !m.tasks?.[x.id]?.done).length;
+  const badge = n => n ? `<span class="badge num">${n}</span>` : '';
+  let h = `<p class="navh">Шолу</p><a href="#plan" ${S.view==='plan' ? 'aria-current="page"' : ''}>${ico('home')}<span class="nl">Басты бет</span>${badge(left)}</a>`;
+  h += `<p class="navh">Пәндер</p>`;
+  const subs = subjects();
+  subs.forEach(s => {
+    const on = S.view === 'subject' && S.subject === s.id;
+    h += `<a href="#s-${esc(s.id)}-analysis" class="${on ? 'subj-on' : ''}" ${on ? 'aria-current="true"' : ''}>${ico(s.id)}<span class="nl">${esc(s.name)}</span></a>`;
+    if (on) h += `<div class="sub">${TABS.map(tb => `<a href="#s-${esc(s.id)}-${tb.id}" ${S.tab===tb.id ? 'aria-current="page"' : ''}><span class="nl">${esc(tb.name)}</span><span class="cnt num">${tabCount(s.id, tb.id) || ''}</span></a>`).join('')}</div>`;
+  });
+  if (!subs.length) h += `<p class="nempty">${S.role==='loading' ? 'Жүктелуде…' : 'Пән әлі қосылмаған'}</p>`;
+  if (r === 'curator'){
+    h += S.addingSubject
+      ? `<form class="addsub" id="subjForm"><input id="subjName" placeholder="Пән атауы" maxlength="60" required aria-label="Пән атауы"><button class="btn sm primary">Қосу</button></form>`
+      : `<button class="naddbtn" data-act="add-subj">${ico('plus')}<span class="nl">Пән қосу</span></button>`;
+    h += `<p class="navh">Басқару</p><a href="#students" ${S.view==='students' ? 'aria-current="page"' : ''}>${ico('users')}<span class="nl">Оқушылар</span>${badge(Object.keys(S.students).length)}</a>`;
+  }
+  $('#nav').innerHTML = h;
+  if (S.addingSubject){ const i = $('#subjName'); if (i) i.focus(); }
+}
+
+/* ---------- shell ---------- */
+function renderShell(){
+  renderNav();
+  const r = ROLE(), v = S.view;
+  let html = '';
+  if (S.preview) html += `<div class="preview-bar"><span>Сіз сайтты оқушы көзімен көріп тұрсыз. Белгілер сақталмайды.</span><button class="btn sm" data-act="preview-off">Куратор режиміне оралу</button></div>`;
+  if (S.role === 'guest') html += `<div class="preview-bar"><span>Деректер қосылмады. Тапсырмаларды көріп, орындау үшін сайтқа claude.ai аккаунтымен кіріңіз.</span></div>`;
+  if (S.ro && S.role === 'student') html += `<div class="preview-bar"><span>Сізде тек қарау рұқсаты бар. Тапсырма белгілеу үшін куратордан «Contributor» (қатысушы) рұқсатын сұраңыз.</span></div>`;
+
+  if (needsReg()){
+    html += `<section class="reg">${bot()}<form id="regForm" style="display:grid;gap:10px">
+      <p class="eyebrow" style="color:var(--glow)">LEVEL UP · тіркелу</p>
+      <h2>Сәлем! Мен — Робот X, сенің оқу көмекшің.</h2>
+      <p>Танысайық. Атың мен тобыңды жаз, сонда күндік жоспарың ашылады және куратор нәтижеңді көреді.</p>
+      <label class="f">Аты-жөні<input id="rName" required maxlength="60" autocomplete="name"></label>
+      <label class="f">Сынып / топ<input id="rGroup" maxlength="40" placeholder="Мысалы: 11А"></label>
+      <p class="err" id="rErr" hidden></p>
+      <div class="actions"><button class="btn primary">Оқуды бастау</button></div></form></section>`;
+    $('#main').innerHTML = html; return;
+  }
+
+  if (v === 'plan'){
+    html += `<section class="vhead"><div><p class="eyebrow">Күндік жоспар</p><h1 id="planTitle">${esc(fmtDate(S.date))}</h1><p class="lead">Куратор жариялаған тапсырмаларды кеш соңына (23:59) дейін орындап, белгі қойып, дәлел жүкте.</p></div>
+      <div class="datectl"><button class="btn sm" data-act="day" data-d="-1" aria-label="Алдыңғы күн">‹</button><input type="date" id="planDate" value="${S.date}" aria-label="Күнді таңдау"><button class="btn sm" data-act="day" data-d="1" aria-label="Келесі күн">›</button><button class="btn sm ghost" data-act="today">Бүгін</button></div></section>`;
+    if (r === 'curator'){
+      html += `<form class="card composer" id="taskForm">
+        <h2>Жаңа тапсырма · <span id="formDate">${esc(fmtDate(S.date))}</span></h2>
+        <label class="f">Тапсырма<input id="tTitle" required maxlength="140" placeholder="Мысалы: Математика, 3-нұсқа: 1–10 есептерді шығару"></label>
+        <label class="f">Түсіндірме (міндетті емес)<textarea id="tDesc" maxlength="1200" placeholder="Не істеу керек, қандай дәлел жүктеу керек"></textarea></label>
+        <div class="row"><label class="f">Пән<select id="tSubj"><option value="">Таңдалмаған</option>${subjects().map(s=>`<option value="${esc(s.id)}">${esc(s.name)}</option>`).join('')}</select></label>
+        <label class="f">Бөлім<select id="tSec"><option value="">Таңдалмаған</option>${TABS.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('')}</select></label></div>
+        <div class="actions"><button class="btn primary" type="submit" data-mode="publish">Жариялау</button><button class="btn" type="submit" data-mode="draft">Жоба ретінде сақтау</button><span class="muted" style="font-size:.82rem">Жарияланған тапсырманы барлық оқушы бірден көреді.</span></div>
+      </form><div id="draftList" class="list"></div>`;
+    } else html += `<div id="deadline"></div>`;
+    html += `<div id="taskList" class="list"></div>`;
+  } else if (v === 'subject'){
+    const tb = TAB[S.tab], sid = S.subject;
+    html += `<section class="vhead"><div><p class="eyebrow">Пән</p><h1 id="subjTitle">${esc(subjName(sid) || '…')}</h1><p class="lead">${esc(tb.lead)}</p></div>
+      ${r==='curator' ? `<button class="btn sm ghost danger" data-act="del-subj" data-id="${esc(sid)}">Пәнді өшіру</button>` : ''}</section>
+      <nav class="pills" id="pills" aria-label="Пән бөлімдері"></nav>`;
+    if (tb.mat){
+      if (r === 'curator') html += `<form class="card composer" id="matForm">
+        <h2>${esc(tb.name)}: жаңа материал</h2>
+        <div class="row"><label class="f">Атауы<input id="mTitle" required maxlength="140" placeholder="${esc(tb.ph)}"></label>
+        <label class="f">Сілтеме (міндетті емес)<input id="mLink" type="url" placeholder="https://"></label></div>
+        <label class="f">Сипаттама<textarea id="mDesc" maxlength="4000"></textarea></label>
+        <div class="actions"><label class="btn upload">Файл тіркеу<input type="file" id="mFile"></label><span id="mFileName" class="muted" style="font-size:.85rem"></span><button class="btn primary" type="submit" style="margin-left:auto">Қосу</button></div>
+      </form>`;
+      html += `<div id="matList" class="grid"></div>`;
+    } else if (S.tab === 'checklists'){
+      if (r === 'curator') html += `<form class="card composer" id="clForm">
+        <h2>Жаңа чек-лист</h2>
+        <label class="f">Атауы<input id="cTitle" required maxlength="140" placeholder="Мысалы: Тақырыпты қайталау"></label>
+        <label class="f">Пункттер (әрқайсысы жаңа жолдан)<textarea id="cItems" required placeholder="Формулаларды жаттау\n10 есеп шығару\nҚателерді талдау"></textarea></label>
+        <div class="actions"><button class="btn primary" type="submit">Жариялау</button></div></form>`;
+      html += `<div id="clList" class="grid"></div>`;
+    } else if (S.tab === 'tests'){
+      if (r === 'curator') html += `<form class="card composer" id="testForm">
+        <h2>Жаңа тест</h2>
+        <label class="f">Тест атауы<input id="qTitle" required maxlength="140" placeholder="Мысалы: 1-тақырып бойынша тест"></label>
+        <div id="qBlocks" class="list"></div>
+        <div class="actions"><button class="btn" type="button" data-act="add-q">+ Сұрақ қосу</button><button class="btn primary" type="submit" style="margin-left:auto">Тестті жариялау</button></div></form>`;
+      html += `<div id="testList" class="list"></div>`;
+    }
+  } else if (v === 'students'){
+    html += `<section class="vhead"><div><p class="eyebrow">Оқушылар</p><h1>Оқушылар</h1><p class="lead">Әр оқушының тапсырмалары, дәлелдері, чек-лист пен тест нәтижелері.</p></div></section>
+      <div class="datectl"><span class="muted">Күн:</span><button class="btn sm" data-act="day" data-d="-1">‹</button><input type="date" id="planDate" value="${S.date}"><button class="btn sm" data-act="day" data-d="1">›</button><button class="btn sm ghost" data-act="today">Бүгін</button></div><div id="stuList"></div><div id="stuDetail"></div>`;
+  }
+  $('#main').innerHTML = html;
+  if (v === 'subject' && S.tab === 'tests' && r === 'curator') addQ();
+  renderData();
+}
+
+function emptyBox(text){ return `<div class="empty">${bot()}<p>${esc(text)}</p></div>`; }
+function proofHtml(p, removable, tid){
+  const url = fileUrl('proofs', p.path);
+  const isImg = (p.type || '').startsWith('image/');
+  const ext = (p.name || '').split('.').pop().slice(0,4).toUpperCase() || 'FILE';
+  return `<span class="proof">${isImg ? `<a href="${esc(url)}" target="_blank" rel="noopener"><img src="${esc(url)}" alt=""></a>` : `<span class="fic">${esc(ext)}</span>`}<a href="${esc(url)}" target="_blank" rel="noopener" title="${esc(p.name)}">${esc(p.name || 'файл')}</a>${removable ? `<button data-act="rm-proof" data-t="${esc(tid)}" data-p="${esc(p.path)}" aria-label="Өшіру">×</button>` : ''}</span>`;
+}
+function statusChip(tp, task){
+  if (tp && tp.done){
+    const late = tp.doneAt && tp.doneAt > endOf(task.date);
+    return late ? `<span class="chip warn">Кешігіп орындалды · ${fmtTime(tp.doneAt)}</span>` : `<span class="chip ok">Орындалды${tp.doneAt ? ' · ' + fmtTime(tp.doneAt) : ''}</span>`;
+  }
+  if (Date.now() > endOf(task.date)) return `<span class="chip bad">Орындалмады</span>`;
+  return `<span class="chip">Күтілуде</span>`;
+}
+function taskTags(t){
+  let h = '';
+  if (t.subject && subjName(t.subject)) h += `<a class="tag" href="#s-${esc(t.subject)}-${TAB[t.section] ? t.section : 'analysis'}">${esc(subjName(t.subject))}</a>`;
+  if (TAB[t.section]) h += t.subject ? `<span class="tag" style="color:var(--muted)">${esc(TAB[t.section].name)}</span>` : `<span class="tag">${esc(TAB[t.section].name)}</span>`;
+  return h;
+}
+
+/* ---------- data rendering ---------- */
+function renderData(){
+  renderNav();
+  if (needsReg()) return;
+  const r = ROLE(), v = S.view;
+  if (v === 'plan') r === 'curator' ? renderPlanCurator() : renderPlanStudent();
+  else if (v === 'subject'){
+    const st = $('#subjTitle'); if (st) st.textContent = subjName(S.subject) || (S.subjects.length ? 'Пән табылмады' : '…');
+    const p = $('#pills'); if (p) p.innerHTML = TABS.map(tb => `<a href="#s-${esc(S.subject)}-${tb.id}" ${S.tab===tb.id ? 'aria-current="page"' : ''}>${esc(tb.name)}<span class="cnt">${tabCount(S.subject, tb.id)}</span></a>`).join('');
+    if (TAB[S.tab].mat) renderMaterials();
+    else if (S.tab === 'checklists') renderChecklists();
+    else if (S.tab === 'tests') renderTests();
+  }
+  else if (v === 'students') renderStudents();
+}
+
+function renderPlanStudent(){
+  const list = $('#taskList'); if (!list) return;
+  const tasks = pubTasks(S.date), m = MY();
+  const done = tasks.filter(t => m.tasks?.[t.id]?.done).length;
+  const dl = $('#deadline');
+  if (dl){
+    if (tasks.length){
+      dl.innerHTML = `<div class="banner"><div class="big num">${done}/${tasks.length}</div><div class="grow"><b>${done === tasks.length ? 'Барлығы орындалды. Жарайсың!' : 'тапсырма орындалды'}</b><span class="muted" id="countdown">${countdownText()}</span><div class="bar" style="margin-top:6px"><i style="width:${pct(done,tasks.length)}%"></i></div></div></div>`;
+      if (S.date > today()) $('#countdown').textContent = 'Бұл күннің тапсырмалары алдын ала жарияланған.';
+    } else dl.innerHTML = '';
+  }
+  if (!tasks.length){ list.innerHTML = emptyBox(S.role === 'guest' || S.role === 'loading' ? 'Тапсырмалар кіргеннен кейін осында шығады.' : 'Куратор бұл күнге әлі тапсырма жарияламады. Кейінірек қайта кір.'); return; }
+  list.innerHTML = tasks.map(t => {
+    const tp = m.tasks?.[t.id] || {};
+    const proofs = tp.proofs || [];
+    const up = S.uploading[t.id];
+    return `<article class="card task ${tp.done ? 'is-done' : ''}">
+      <input type="checkbox" class="tick" data-act="tick" data-t="${esc(t.id)}" ${tp.done ? 'checked' : ''} aria-label="Орындалды деп белгілеу">
+      <div class="tbody">
+        <div class="thead"><h3>${esc(t.title)}</h3>${statusChip(tp, t)}</div>
+        ${t.desc ? `<p class="tdesc">${esc(t.desc)}</p>` : ''}
+        <div class="meta">${taskTags(t)}<span>Мерзімі: ${esc(fmtDate(t.date))}, 23:59</span></div>
+        <div class="proofs">${proofs.map(p => proofHtml(p, !RO(), t.id)).join('')}
+          <label class="btn sm upload">${up ? 'Жүктелуде…' : (proofs.length ? '+ Тағы дәлел' : 'Дәлел жүктеу')}<input type="file" data-act="proof" data-t="${esc(t.id)}" accept="image/*,application/pdf,.doc,.docx,.ppt,.pptx,.zip,.py,.txt" ${up ? 'disabled' : ''}></label>
+          ${tp.done && !proofs.length ? '<span class="chip warn">Дәлел әлі жүктелмеді</span>' : ''}
+        </div>
+      </div></article>`;
+  }).join('');
+}
+function countdownText(){
+  if (S.date !== today()) return S.date < today() ? 'Бұл күннің мерзімі өтіп кетті.' : '';
+  const ms = endOf(S.date) - Date.now();
+  const h = Math.floor(ms / 3600000), mi = Math.floor(ms % 3600000 / 60000);
+  return `Кеш соңына дейін (23:59) ${h} сағ ${mi} мин қалды`;
+}
+setInterval(() => { const c = $('#countdown'); if (c && S.date === today()) c.textContent = countdownText(); }, 30000);
+
+function renderPlanCurator(){
+  const fd = $('#formDate'); if (fd) fd.textContent = fmtDate(S.date);
+  const sel = $('#tSubj');
+  if (sel && sel.options.length - 1 !== S.subjects.length){ const v = sel.value; sel.innerHTML = `<option value="">Таңдалмаған</option>${subjects().map(s=>`<option value="${esc(s.id)}">${esc(s.name)}</option>`).join('')}`; sel.value = v; }
+  const dl = $('#draftList');
+  const drafts = S.drafts.filter(d => d.date === S.date);
+  if (dl) dl.innerHTML = drafts.length ? `<p class="eyebrow">Жобалар · оқушылар көрмейді</p>` + drafts.map(d => `<article class="card">
+      <div class="thead"><h3>${esc(d.title)}</h3><span class="chip">Жоба</span></div>
+      ${d.desc ? `<p class="tdesc" style="margin-top:6px">${esc(d.desc)}</p>` : ''}
+      <div class="meta" style="margin-top:6px">${taskTags(d)}</div>
+      <div class="actions" style="margin-top:10px"><button class="btn primary sm" data-act="publish-draft" data-id="${esc(d.id)}">Жариялау</button><button class="btn sm danger" data-act="del" data-col="drafts" data-id="${esc(d.id)}">Өшіру</button></div></article>`).join('') : '';
+  const list = $('#taskList'); if (!list) return;
+  const tasks = pubTasks(S.date), studs = studentList();
+  if (!tasks.length){ list.innerHTML = `<p class="eyebrow">Жарияланған</p>` + emptyBox('Бұл күнге жарияланған тапсырма жоқ. Жоғарыдағы формадан қосыңыз.'); return; }
+  list.innerHTML = `<p class="eyebrow">Жарияланған · ${tasks.length}</p>` + tasks.map(t => {
+    const rows = studs.map(s => ({ s, tp: S.progress[s.id]?.tasks?.[t.id] }));
+    const done = rows.filter(x => x.tp?.done).length;
+    const withProof = rows.filter(x => x.tp?.proofs?.length).length;
+    const open = S.openTasks[t.id];
+    return `<article class="card"><div class="tbody">
+      <div class="thead"><h3>${esc(t.title)}</h3><span class="meta">${taskTags(t)}<span>Жарияланды ${t.publishedAt ? fmtTime(t.publishedAt) : ''}</span></span></div>
+      ${t.desc ? `<p class="tdesc">${esc(t.desc)}</p>` : ''}
+      <div class="mini"><div class="bar" style="flex:1;width:auto"><i style="width:${pct(done, studs.length)}%"></i></div><span class="num">${done}/${studs.length}</span><span class="muted" style="font-size:.82rem">орындады · ${withProof} дәлел</span></div>
+      <div class="actions"><button class="btn sm" data-act="toggle-task" data-id="${esc(t.id)}">${open ? 'Жасыру' : 'Оқушылар бойынша'}</button><button class="btn sm ghost danger" data-act="del" data-col="tasks" data-id="${esc(t.id)}">Өшіру</button></div>
+      ${open ? `<div class="who">${rows.length ? rows.map(({s, tp}) => `<div class="who-row"><b>${esc(s.name)} <span class="muted" style="font-weight:400">${esc(s.group || '')}</span></b>${statusChip(tp, t)}${tp?.proofs?.length ? `<div class="proofs">${tp.proofs.map(p => proofHtml(p, false)).join('')}</div>` : ''}</div>`).join('') : '<p class="muted">Әзірге тіркелген оқушы жоқ.</p>'}</div>` : ''}
+    </div></article>`;
+  }).join('');
+}
+
+function renderMaterials(){
+  const el = $('#matList'); if (!el) return;
+  const items = S.materials.filter(m => m.subject === S.subject && m.section === S.tab).sort((a,b) => (b.createdAt||0) - (a.createdAt||0));
+  if (!items.length){ el.innerHTML = emptyBox(ROLE()==='curator' ? 'Бұл бөлім бос. Жоғарыдағы формадан алғашқы материалды қосыңыз.' : 'Куратор бұл бөлімге әлі материал қоспады.'); return; }
+  el.innerHTML = items.map(m => `<article class="card" style="display:flex;flex-direction:column;gap:8px">
+    <h3>${esc(m.title)}</h3>
+    ${m.desc ? `<p class="tdesc">${esc(m.desc)}</p>` : ''}
+    <div class="actions" style="margin-top:auto">
+      ${m.link ? `<a class="btn sm" href="${esc(m.link)}" target="_blank" rel="noopener">Ашу ↗</a>` : ''}
+      ${m.file ? `<a class="btn sm" href="${esc(fileUrl('materials', m.file.path))}" target="_blank" rel="noopener">${esc(m.file.name)}</a>` : ''}
+      ${ROLE()==='curator' ? `<button class="btn sm ghost danger" data-act="del" data-col="materials" data-id="${esc(m.id)}" style="margin-left:auto">Өшіру</button>` : ''}
+    </div></article>`).join('');
+}
+
+function renderChecklists(){
+  const el = $('#clList'); if (!el) return;
+  const items = S.checklists.filter(c => c.subject === S.subject).sort((a,b) => (b.createdAt||0) - (a.createdAt||0));
+  if (!items.length){ el.innerHTML = emptyBox(ROLE()==='curator' ? 'Чек-лист әлі жоқ. Жоғарыда біріншісін жасаңыз.' : 'Куратор бұл пәнге әлі чек-лист жарияламады.'); return; }
+  const r = ROLE(), studs = studentList();
+  el.innerHTML = items.map(c => {
+    const its = c.items || [];
+    if (r === 'curator'){
+      const rates = studs.map(s => ({ s, n: its.filter((_, i) => S.progress[s.id]?.checks?.[c.id]?.[i]).length }));
+      const avg = rates.length ? Math.round(rates.reduce((a, x) => a + pct(x.n, its.length), 0) / rates.length) : 0;
+      return `<article class="card" style="display:flex;flex-direction:column;gap:8px"><div class="thead"><h3>${esc(c.title)}</h3><span class="chip">${its.length} пункт</span></div>
+        <ol style="margin:0;padding-left:20px;color:var(--muted)">${its.map(i => `<li>${esc(i)}</li>`).join('')}</ol>
+        <div class="mini"><div class="bar" style="flex:1;width:auto"><i style="width:${avg}%"></i></div><span class="num">${avg}%</span><span class="muted" style="font-size:.8rem">орташа</span></div>
+        ${rates.length ? `<div class="who">${rates.map(x => `<div class="who-row"><span>${esc(x.s.name)}</span><span class="num">${x.n}/${its.length}</span></div>`).join('')}</div>` : ''}
+        <div class="actions"><button class="btn sm ghost danger" data-act="del" data-col="checklists" data-id="${esc(c.id)}">Өшіру</button></div></article>`;
+    }
+    const st = MY().checks?.[c.id] || {};
+    const n = its.filter((_, i) => st[i]).length;
+    return `<article class="card" style="display:flex;flex-direction:column;gap:6px"><div class="thead"><h3>${esc(c.title)}</h3><span class="num muted">${n}/${its.length}</span></div>
+      <div class="bar"><i style="width:${pct(n, its.length)}%"></i></div>
+      <div class="cl-items">${its.map((it, i) => `<label class="${st[i] ? 'done' : ''}"><input type="checkbox" data-act="check" data-c="${esc(c.id)}" data-i="${i}" ${st[i] ? 'checked' : ''}><span>${esc(it)}</span></label>`).join('')}</div></article>`;
+  }).join('');
+}
+
+function renderTests(){
+  const el = $('#testList'); if (!el) return;
+  const items = S.tests.filter(t => t.subject === S.subject).sort((a,b) => (b.createdAt||0) - (a.createdAt||0));
+  if (!items.length){ el.innerHTML = emptyBox(ROLE()==='curator' ? 'Тест әлі жоқ. Жоғарыдағы құрастырушымен біріншісін жасаңыз.' : 'Куратор бұл пәнге әлі тест жарияламады.'); return; }
+  const r = ROLE(), studs = studentList();
+  el.innerHTML = items.map(t => {
+    const qs = t.questions || [];
+    if (r === 'curator'){
+      const res = studs.map(s => ({ s, x: S.progress[s.id]?.tests?.[t.id] })).filter(o => o.x);
+      return `<article class="card" style="display:flex;flex-direction:column;gap:8px"><div class="thead"><h3>${esc(t.title)}</h3><span class="chip">${qs.length} сұрақ</span></div>
+        <p class="muted" style="font-size:.88rem">Тапсырған: ${res.length}/${studs.length}${res.length ? ' · орташа ' + Math.round(res.reduce((a,o)=>a+pct(o.x.score,o.x.total),0)/res.length) + '%' : ''}</p>
+        ${res.length ? `<div class="who">${res.map(o => `<div class="who-row"><span>${esc(o.s.name)} <span class="muted">${o.x.at ? fmtDT(o.x.at) : ''}</span></span><span class="num">${o.x.score}/${o.x.total}</span></div>`).join('')}</div>` : ''}
+        <div class="actions"><button class="btn sm" data-act="open-test" data-id="${esc(t.id)}">${S.testOpen === t.id ? 'Жасыру' : 'Сұрақтарды көру'}</button><button class="btn sm ghost danger" data-act="del" data-col="tests" data-id="${esc(t.id)}">Өшіру</button></div>
+        ${S.testOpen === t.id ? qs.map((q, qi) => `<div class="q"><b>${qi+1}. ${esc(q.q)}</b>${q.options.map((o, oi) => `<div class="opt ${oi===q.answer?'right':''}">${esc(o)}</div>`).join('')}</div>`).join('') : ''}
+      </article>`;
+    }
+    const mine = MY().tests?.[t.id];
+    const open = S.testOpen === t.id;
+    const draft = S.testDraft[t.id] || {};
+    let body = '';
+    if (open){
+      body = `<form data-test="${esc(t.id)}" class="testrun">${qs.map((q, qi) => `<div class="q"><b>${qi+1}. ${esc(q.q)}</b>${q.options.map((o, oi) => `<label class="opt"><input type="radio" name="q${qi}" value="${oi}" ${draft[qi]===oi?'checked':''} required> ${esc(o)}</label>`).join('')}</div>`).join('')}
+        <div class="actions" style="margin-top:12px"><button class="btn primary" type="submit">Тапсыру</button><button class="btn ghost" type="button" data-act="open-test" data-id="${esc(t.id)}">Болдырмау</button></div></form>`;
+    } else if (mine){
+      body = `<div class="mini" style="gap:14px"><span class="score num">${mine.score}/${mine.total}</span><span class="muted">${pct(mine.score, mine.total)}% · ${mine.at ? fmtDT(mine.at) : ''}</span></div>
+        <details><summary class="muted" style="cursor:pointer">Жауаптарымды көру</summary>${qs.map((q, qi) => `<div class="q"><b>${qi+1}. ${esc(q.q)}</b>${q.options.map((o, oi) => `<div class="opt ${oi===q.answer?'right':(mine.answers?.[qi]===oi?'wrong':'')}">${esc(o)}</div>`).join('')}</div>`).join('')}</details>`;
+    }
+    return `<article class="card" style="display:flex;flex-direction:column;gap:10px"><div class="thead"><h3>${esc(t.title)}</h3><span class="chip ${mine ? 'ok' : ''}">${mine ? 'Тапсырылды' : qs.length + ' сұрақ'}</span></div>
+      ${body}${open ? '' : `<div class="actions"><button class="btn ${mine ? '' : 'primary'} sm" data-act="open-test" data-id="${esc(t.id)}">${mine ? 'Қайта тапсыру' : 'Бастау'}</button></div>`}</article>`;
+  }).join('');
+}
+
+function studentStats(s){
+  const p = S.progress[s.id] || {};
+  const dayTasks = pubTasks(S.date);
+  const dayDone = dayTasks.filter(t => p.tasks?.[t.id]?.done).length;
+  const dayProof = dayTasks.filter(t => p.tasks?.[t.id]?.proofs?.length).length;
+  const since = s.joinedAt ? ymd(new Date(s.joinedAt)) : '0000';
+  const all = S.tasks.filter(t => t.date >= since && t.date <= today());
+  const allDone = all.filter(t => p.tasks?.[t.id]?.done).length;
+  const tests = Object.values(p.tests || {});
+  const testAvg = tests.length ? Math.round(tests.reduce((a,x)=>a+pct(x.score,x.total),0)/tests.length) : null;
+  let clN = 0, clT = 0; S.checklists.forEach(c => { const its = c.items||[]; clT += its.length; clN += its.filter((_,i)=>p.checks?.[c.id]?.[i]).length; });
+  return { p, dayTasks, dayDone, dayProof, all, allDone, testAvg, cl: pct(clN, clT) };
+}
+function renderStudents(){
+  const el = $('#stuList'); if (!el) return;
+  const studs = studentList();
+  if (!studs.length){ el.innerHTML = emptyBox('Әзірге тіркелген оқушы жоқ. Сайт сілтемесін оқушыларға жіберіңіз: олар алғаш кіргенде аты-жөнін жазып тіркеледі.'); $('#stuDetail').innerHTML=''; return; }
+  el.innerHTML = `<div class="tablewrap"><table><thead><tr><th>Оқушы</th><th>Топ</th><th>${esc(fmtDate(S.date))}</th><th>Дәлел</th><th>Барлық тапсырма</th><th>Чек-лист</th><th>Тест</th></tr></thead><tbody>
+    ${studs.map(s => { const x = studentStats(s); return `<tr data-act="open-stu" data-id="${esc(s.id)}" class="${S.openStudent===s.id?'open':''}" tabindex="0">
+      <td><b>${esc(s.name)}</b></td><td class="muted">${esc(s.group||'—')}</td>
+      <td>${x.dayTasks.length ? `<span class="chip ${x.dayDone===x.dayTasks.length?'ok':(S.date<today()?'bad':'')}">${x.dayDone}/${x.dayTasks.length}</span>` : '<span class="muted">—</span>'}</td>
+      <td class="num">${x.dayTasks.length ? x.dayProof + '/' + x.dayTasks.length : '—'}</td>
+      <td><span class="mini"><span class="bar"><i style="width:${pct(x.allDone,x.all.length)}%"></i></span><span class="num">${pct(x.allDone,x.all.length)}%</span></span></td>
+      <td class="num">${x.cl}%</td><td class="num">${x.testAvg===null?'—':x.testAvg+'%'}</td></tr>`; }).join('')}
+  </tbody></table></div>`;
+  const d = $('#stuDetail'); const s = S.students[S.openStudent];
+  if (!s){ d.innerHTML = ''; return; }
+  const x = studentStats(s);
+  const recent = [...S.tasks].filter(t => t.date <= today()).sort((a,b) => b.date.localeCompare(a.date) || (b.publishedAt||0)-(a.publishedAt||0)).slice(0, 30);
+  d.innerHTML = `<article class="card" style="display:flex;flex-direction:column;gap:14px">
+    <div class="thead"><div><p class="eyebrow">Оқушы картасы</p><h2>${esc(s.name)}</h2><p class="muted">${esc(s.group||'')}${s.joinedAt ? ' · тіркелді ' + fmtDT(s.joinedAt) : ''}</p></div><button class="btn sm ghost" data-act="open-stu" data-id="${esc(s.id)}">Жабу</button></div>
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr))">
+      <div><p class="eyebrow">Тапсырмалар</p><p class="score num">${x.allDone}/${x.all.length}</p></div>
+      <div><p class="eyebrow">Чек-листтер</p><p class="score num">${x.cl}%</p></div>
+      <div><p class="eyebrow">Тест орташа</p><p class="score num">${x.testAvg===null?'—':x.testAvg+'%'}</p></div>
+    </div>
+    <div><p class="eyebrow" style="margin-bottom:6px">Тапсырмалар тарихы</p>
+      ${recent.length ? `<div class="who" style="border:0;padding:0">${recent.map(t => { const tp = x.p.tasks?.[t.id]; return `<div class="who-row"><span><span class="num muted">${t.date.slice(5).replace('-','.')}</span> ${esc(t.title)}</span>${statusChip(tp,t)}${tp?.proofs?.length ? `<div class="proofs">${tp.proofs.map(p=>proofHtml(p,false)).join('')}</div>`:''}</div>`; }).join('')}</div>` : '<p class="muted">Тапсырма әлі жоқ.</p>'}
+    </div>
+    ${S.tests.length ? `<div><p class="eyebrow" style="margin-bottom:6px">Тесттер</p><div class="who" style="border:0;padding:0">${S.tests.map(t => { const r = x.p.tests?.[t.id]; return `<div class="who-row"><span>${esc(subjName(t.subject) ? subjName(t.subject) + ': ' : '')}${esc(t.title)}</span><span class="num">${r ? r.score+'/'+r.total : '<span class="muted">тапсырмаған</span>'}</span></div>`; }).join('')}</div></div>` : ''}
+  </article>`;
+}
+
+/* ---------- helper panel ---------- */
+function renderHelper(){
+  const r = S.role === 'curator' && !S.preview ? 'curator' : 'student';
+  const key = S.view === 'subject' ? S.tab : S.view;
+  const tip = TIPS[r][key] || TIPS[r].plan;
+  const where = S.view === 'subject' ? `${subjName(S.subject) || 'Пән'} · ${TAB[S.tab].name}` : (S.view === 'students' ? 'Оқушылар' : 'Күндік жоспар');
+  const msgs = $('#hmsgs');
+  msgs.innerHTML = `<div class="msg bot">Сәлем! Мен — Робот X. Қазір сен «${esc(where)}» бөліміндесің. ${esc(tip)}</div>` + S.chat.map(m => `<div class="msg ${m.me?'me':'bot'}">${esc(m.text)}</div>`).join('');
+  $('#hform').hidden = !S.sample;
+  msgs.scrollTop = msgs.scrollHeight;
+}
+$('#greet').addEventListener('click', () => { const p = $('#hpanel'); p.hidden = !p.hidden; if (!p.hidden){ renderHelper(); if (S.sample) $('#hq').focus(); } });
+$('#hpClose').addEventListener('click', () => $('#hpanel').hidden = true);
+$('#hform').addEventListener('submit', async e => {
+  e.preventDefault();
+  const q = $('#hq').value.trim(); if (!q || !S.sample) return;
+  $('#hq').value = '';
+  S.chat.push({ me:true, text:q }); const ans = { text:'Ойланып жатырмын…' }; S.chat.push(ans); renderHelper();
+  const bubble = $('#hmsgs').lastElementChild;
+  const hist = S.chat.slice(-8, -1).map(m => (m.me ? 'Пайдаланушы: ' : 'Робот X: ') + m.text).join('\n');
+  const where = S.view === 'subject' ? `${subjName(S.subject)}, ${TAB[S.tab].name}` : 'Күндік жоспар';
+  const prompt = `Сен — Робот X, LEVEL UP атты оқу платформасының мейірімді робот-көмекшісісің. Платформадағы пәндер: ${subjects().map(s=>s.name).join(', ')}. Пайдаланушы: ${S.role==='curator'?'куратор':'оқушы'}. Ағымдағы бөлім: ${where}. Тек қазақ тілінде, қысқа (5 сөйлемге дейін), түсінікті жауап бер. Оқушыға дайын жауапты бірден берме, ойлануға бағытта.\n\nСөйлесу:\n${hist}\n\nЖаңа сұрақ: ${q}`;
+  try {
+    const res = await S.sample(prompt, { modelTier:'quick', cache:false, onText: ({ text }) => { ans.text = text; bubble.textContent = text; } });
+    ans.text = res.text; bubble.textContent = res.text;
+  } catch (err){
+    ans.text = err && err.code === 'not_granted' ? 'Сұрақтарға жауап беру рұқсаты өшірулі. Бөлімдер бойынша кеңестерім әлі де осында.' : 'Қазір жауап бере алмадым. Сәлден кейін қайталап көр.';
+    bubble.textContent = ans.text;
+    if (err && err.code === 'not_granted'){ S.sample = null; $('#hform').hidden = true; }
+  }
+});
+
+/* ---------- events ---------- */
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-act]'); if (!b) return;
+  const act = b.dataset.act;
+  if (act === 'day'){ S.date = shiftDate(S.date, +b.dataset.d); syncDate(); return; }
+  if (act === 'today'){ S.date = today(); syncDate(); return; }
+  if (act === 'preview-off'){ setPreview(false); return; }
+  if (act === 'add-subj'){ S.addingSubject = true; renderNav(); return; }
+  if (act === 'toggle-task'){ S.openTasks[b.dataset.id] = !S.openTasks[b.dataset.id]; renderData(); return; }
+  if (act === 'open-stu'){ S.openStudent = S.openStudent === b.dataset.id ? null : b.dataset.id; renderData(); if (S.openStudent) $('#stuDetail').scrollIntoView({ behavior:'smooth', block:'start' }); return; }
+  if (act === 'open-test'){ S.testOpen = S.testOpen === b.dataset.id ? null : b.dataset.id; renderData(); return; }
+  if (act === 'add-q'){ addQ(); return; }
+  if (act === 'rm-q'){ b.closest('.qb').remove(); renumberQ(); return; }
+  if (act === 'del' || act === 'del-subj'){
+    if (!b.dataset.armed){ b.dataset.armed = '1'; const old = b.textContent; b.textContent = act === 'del-subj' ? 'Пәнді өшіруді растау?' : 'Растау?'; setTimeout(() => { if (b.isConnected){ delete b.dataset.armed; b.textContent = old; } }, 3500); return; }
+    if (act === 'del-subj'){ await cur(() => dbDelete('subjects', b.dataset.id), 'Пән өшірілді'); location.hash = 'plan'; return; }
+    await cur(() => dbDelete(b.dataset.col, b.dataset.id), 'Өшірілді');
+    return;
+  }
+  if (act === 'publish-draft'){
+    const d = S.drafts.find(x => x.id === b.dataset.id); if (!d) return;
+    b.disabled = true;
+    const { id, ...rest } = d;
+    await cur(() => q(sb.from('tasks').update({ published:true, published_at:new Date().toISOString() }).eq('id', id)), 'Жарияланды: оқушылар көре алады');
+    return;
+  }
+  if (act === 'rm-proof'){
+    const tid = b.dataset.t, pid = b.dataset.p;
+    const proofs = (MY().tasks?.[tid]?.proofs || []).filter(p => p.path !== pid);
+    await writeMy({ tasks: { [tid]: { proofs } } });
+    if (!RO()){ try { await sb.storage.from('proofs').remove([pid]); } catch {} }
+    return;
+  }
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.target.matches('tr[data-act]')) e.target.click();
+  if (e.key === 'Escape' && S.addingSubject){ S.addingSubject = false; renderNav(); }
+});
+$('#previewBtn').addEventListener('click', () => setPreview(!S.preview));
+function setPreview(on){
+  S.preview = on; S.previewMy = { tasks:{}, checks:{}, tests:{} };
+  $('#previewBtn').textContent = on ? 'Куратор режимі' : 'Оқушы көрінісі';
+  if (on && S.view === 'students') location.hash = 'plan';
+  renderShell(); renderGreet(); renderHelper();
+}
+function syncDate(){
+  const inp = $('#planDate'); if (inp) inp.value = S.date;
+  const h = $('#planTitle'); if (h) h.textContent = fmtDate(S.date);
+  renderData();
+}
+
+document.addEventListener('change', async e => {
+  const t = e.target;
+  if (t.id === 'planDate'){ if (t.value){ S.date = t.value; syncDate(); } return; }
+  if (t.id === 'mFile'){ $('#mFileName').textContent = t.files[0] ? t.files[0].name : ''; return; }
+  if (t.dataset.act === 'tick'){
+    const tid = t.dataset.t, done = t.checked;
+    await writeMy({ tasks: { [tid]: { done, doneAt: done ? Date.now() : null } } });
+    renderGreet();
+    if (done){ const tp = MY().tasks?.[tid]; toast(tp?.proofs?.length ? 'Жарайсың! Тапсырма орындалды.' : 'Белгі қойылды. Енді дәлел жүктеуді ұмытпа!'); }
+    return;
+  }
+  if (t.dataset.act === 'check'){ await writeMy({ checks: { [t.dataset.c]: { [t.dataset.i]: t.checked } } }); return; }
+  if (t.dataset.act === 'proof'){
+    const f = t.files[0]; if (!f) return;
+    const tid = t.dataset.t;
+    if (RO()){ toast(S.preview ? 'Алдын ала қарау режимі: файл жүктелмейді' : 'Жүктеу үшін сайтқа кіріңіз'); return; }
+    if (f.size > 20 * 1024 * 1024){ toast('Файл тым үлкен: 20 МБ-тан аспауы керек'); return; }
+    S.uploading[tid] = true; renderData();
+    try {
+      const path = `${S.uid}/${Date.now()}-${safeName(f.name)}`;
+      const up = await sb.storage.from('proofs').upload(path, f, { contentType: f.type || undefined });
+      if (up.error) throw up.error;
+      const proofs = [...(MY().tasks?.[tid]?.proofs || []), { path, name:f.name, type:f.type || '', at:Date.now() }];
+      await writeMy({ tasks: { [tid]: { proofs } } });
+      await signUrls();
+      toast('Дәлел жүктелді');
+    } catch (err){ console.warn(err); toast('Файл жүктелмеді. Сурет, PDF немесе құжат түрін байқап көр.'); }
+    S.uploading[tid] = false; renderData();
+    return;
+  }
+  const tf = t.closest('form.testrun');
+  if (tf && t.type === 'radio'){ const id = tf.dataset.test; S.testDraft[id] = S.testDraft[id] || {}; S.testDraft[id][+t.name.slice(1)] = +t.value; }
+});
+
+document.addEventListener('submit', async e => {
+  const f = e.target;
+  if (f.id === 'authForm'){
+    e.preventDefault();
+    const reg = S.authMode === 'register';
+    const login = $('#aLogin').value.trim().toLowerCase(), pass = $('#aPass').value;
+    if (!LOGIN_RE.test(login)) return authErr('Логин тек латын әріптері, сандар, нүкте немесе сызықшадан тұруы керек (3–32 таңба).');
+    if (pass.length < 6) return authErr('Пароль кемінде 6 таңба болуы керек.');
+    let name = '';
+    if (reg){ name = $('#aName').value.trim(); if (!name) return authErr('Аты-жөніңді жаз.'); }
+    const btn = $('#aBtn'); btn.disabled = true; btn.textContent = 'Күте тұр…'; $('#aErr').hidden = true;
+    try {
+      let res;
+      if (reg) res = await sb.auth.signUp({ email: loginEmail(login), password: pass, options: { data: { login, full_name: name, grp: $('#aGroup').value.trim() } } });
+      else res = await sb.auth.signInWithPassword({ email: loginEmail(login), password: pass });
+      if (res.error) throw res.error;
+      if (!res.data.session) throw new Error('confirm');
+      await startSession(res.data.session);
+      if (reg) toast(`Танысқаныма қуаныштымын, ${firstName(name)}!`);
+    } catch (err){ authErr(authMsg(err)); }
+    return;
+  }
+  if (f.id === 'subjForm'){
+    e.preventDefault();
+    const name = $('#subjName').value.trim(); if (!name) return;
+    const id = newId(); const order = Math.max(0, ...S.subjects.map(s => s.order || 0)) + 1;
+    S.addingSubject = false;
+    await cur(() => q(sb.from('subjects').insert({ id, name, ord: order })), 'Пән қосылды');
+    location.hash = `s-${id}-analysis`;
+    return;
+  }
+  if (f.id === 'taskForm'){
+    e.preventDefault();
+    const mode = e.submitter?.dataset.mode || 'publish';
+    const title = $('#tTitle').value.trim(); if (!title) return;
+    const data = { title, desc: $('#tDesc').value.trim(), subject: $('#tSubj').value, section: $('#tSec').value, date: S.date, createdAt: Date.now() };
+    const row = { title:data.title, descr:data.desc, subject:data.subject || null, section:data.section, date:data.date };
+    if (mode === 'publish') await cur(() => q(sb.from('tasks').insert({ ...row, published:true, published_at:new Date().toISOString() })), 'Жарияланды: оқушылар көре алады');
+    else await cur(() => q(sb.from('tasks').insert({ ...row, published:false })), 'Жоба сақталды');
+    f.reset(); return;
+  }
+  if (f.id === 'matForm'){
+    e.preventDefault();
+    const title = $('#mTitle').value.trim(); if (!title) return;
+    const btn = f.querySelector('[type=submit]'); btn.disabled = true;
+    let file = null; const fi = $('#mFile').files[0];
+    if (fi){
+      try { const path = `${S.subject}/${Date.now()}-${safeName(fi.name)}`; const up = await sb.storage.from('materials').upload(path, fi, { contentType: fi.type || undefined }); if (up.error) throw up.error; file = { path, name:fi.name }; }
+      catch { toast('Файл жүктелмеді'); btn.disabled = false; return; }
+    }
+    await cur(() => q(sb.from('materials').insert({ subject:S.subject, section:S.tab, title, descr:$('#mDesc').value.trim(), link:$('#mLink').value.trim(), file_path:file ? file.path : null, file_name:file ? file.name : null })), 'Қосылды');
+    f.reset(); $('#mFileName').textContent = ''; btn.disabled = false; return;
+  }
+  if (f.id === 'clForm'){
+    e.preventDefault();
+    const items = $('#cItems').value.split('\n').map(s => s.trim()).filter(Boolean);
+    if (!items.length) return;
+    await cur(() => q(sb.from('checklists').insert({ subject:S.subject, title:$('#cTitle').value.trim(), items })), 'Чек-лист жарияланды');
+    f.reset(); return;
+  }
+  if (f.id === 'testForm'){
+    e.preventDefault();
+    const questions = [...f.querySelectorAll('.qb')].map(qb => ({
+      q: qb.querySelector('.qq').value.trim(),
+      options: [...qb.querySelectorAll('.qo')].map(i => i.value.trim()),
+      answer: +(qb.querySelector('input[type=radio]:checked')?.value ?? 0),
+    })).filter(q => q.q && q.options.every(Boolean));
+    if (!questions.length){ toast('Кемінде бір толық сұрақ қосыңыз'); return; }
+    await cur(() => q(sb.from('tests').insert({ subject:S.subject, title:$('#qTitle').value.trim(), questions })), 'Тест жарияланды');
+    renderShell(); return;
+  }
+  if (f.classList.contains('testrun')){
+    e.preventDefault();
+    const id = f.dataset.test; const t = S.tests.find(x => x.id === id); if (!t) return;
+    const answers = t.questions.map((_, qi) => { const c = f.querySelector(`input[name=q${qi}]:checked`); return c ? +c.value : -1; });
+    const score = answers.filter((a, qi) => a === t.questions[qi].answer).length;
+    S.testOpen = null; delete S.testDraft[id];
+    await writeMy({ tests: { [id]: { score, total: t.questions.length, answers, at: Date.now() } } });
+    toast(`Нәтиже: ${score}/${t.questions.length}`);
+  }
+});
+
+let qSeq = 0;
+function addQ(){
+  const box = $('#qBlocks'); if (!box) return;
+  const k = ++qSeq;
+  const d = document.createElement('div'); d.className = 'qb';
+  d.innerHTML = `<div class="thead"><b class="qn"></b><button type="button" class="btn sm ghost" data-act="rm-q">Өшіру</button></div>
+    <input class="t qq" id="qq${k}" placeholder="Сұрақ мәтіні" aria-label="Сұрақ мәтіні">
+    <div class="opts">${[0,1,2,3].map(i => `<label><input type="radio" name="ans${k}" value="${i}" ${i===0?'checked':''} aria-label="Дұрыс жауап"><input class="t qo" id="qo${k}_${i}" placeholder="${String.fromCharCode(65+i)} нұсқасы"></label>`).join('')}</div>
+    <p class="muted" style="font-size:.78rem">Дұрыс жауаптың сол жағындағы дөңгелекті белгілеңіз.</p>`;
+  box.appendChild(d); renumberQ();
+}
+function renumberQ(){ document.querySelectorAll('#qBlocks .qn').forEach((el, i) => el.textContent = `${i+1}-сұрақ`); }
+
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+</script>
+</body>
+</html>
