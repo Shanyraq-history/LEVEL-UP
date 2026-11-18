@@ -960,7 +960,7 @@ function renderShell(){
         <div class="actions"><button class="btn primary" type="submit" data-mode="publish">Жариялау</button><button class="btn" type="submit" data-mode="draft">Жоба ретінде сақтау</button><span class="muted" style="font-size:.82rem">Жарияланған тапсырманы барлық оқушы бірден көреді.</span></div>
       </form><div id="draftList" class="list"></div>`;
     } else html += `<div id="deadline"></div>`;
-    html += `<div id="taskList" class="list"></div><div class="sechead"><h3>${r === 'curator' ? 'Пәндер' : 'Менің пәндерім'}</h3></div><div class="subjects" id="subjCards"></div>`;
+    html += `<div id="taskList" class="list"></div>`;
   } else if (v === 'subject'){
     const tb = curSec(), sid = S.subject;
     S.shellKey = tb ? `${sid}:${tb.id}:${tb.kind}` : `${sid}:none`;
