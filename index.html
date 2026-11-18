@@ -351,6 +351,9 @@ body{background:radial-gradient(circle at 82% 2%,var(--halo) 0%,transparent 25%)
 :root[data-subj="ms"]{--sc:#00A3B6}
 :root[data-subj="mat"]{--sc:#1B36B0}
 :root[data-subj="inf"]{--sc:#17404E}
+:root[data-subj]{--d0:#2A2F32; --d1:#323A3D; --d2:#394245; --d3:#4D575B}
+:root[data-subj="inf"]{--d0:#3B5158; --d1:#445B62; --d2:#4C646B; --d3:#5E767D}
+:root[data-subj="hist"]{--d0:#3A3230; --d1:#433A38; --d2:#4B413F; --d3:#5E5351}
 :root[data-subj]:not([data-subj=""]){
   --bg:color-mix(in srgb,var(--sc) 8%,#F6F8F5); --surface:color-mix(in srgb,var(--sc) 3%,#FFFEFB); --surface-2:color-mix(in srgb,var(--sc) 10%,#FFFEFB); --line:color-mix(in srgb,var(--sc) 20%,#E4ECE8);
   --ink:color-mix(in srgb,var(--sc) 28%,#1D2A30); --muted:color-mix(in srgb,var(--sc) 30%,#6C8382); --soft:color-mix(in srgb,var(--sc) 22%,#A7B5B1); --nav-ink:color-mix(in srgb,var(--sc) 30%,#74888B);
@@ -361,22 +364,22 @@ body{background:radial-gradient(circle at 82% 2%,var(--halo) 0%,transparent 25%)
   --t1:color-mix(in srgb,var(--sc) 12%,#FFFFFF); --t2:color-mix(in srgb,var(--sc) 8%,#FFFFFF); --shadow:0 14px 42px color-mix(in srgb,var(--sc) 10%,transparent);
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"])[data-subj]:not([data-subj=""]){
-  --bg:color-mix(in srgb,var(--sc) 30%,#0B1214); --surface:color-mix(in srgb,var(--sc) 38%,#141B1E); --surface-2:color-mix(in srgb,var(--sc) 50%,#192125); --line:color-mix(in srgb,var(--sc) 58%,#2C3438);
+  --bg:color-mix(in srgb,var(--sc) 30%,var(--d0)); --surface:color-mix(in srgb,var(--sc) 38%,var(--d1)); --surface-2:color-mix(in srgb,var(--sc) 50%,var(--d2)); --line:color-mix(in srgb,var(--sc) 58%,var(--d3));
   --ink:#F7F4F2; --muted:color-mix(in srgb,var(--sc) 18%,#CBD3D6); --soft:color-mix(in srgb,var(--sc) 25%,#A3AEB2); --nav-ink:color-mix(in srgb,var(--sc) 15%,#D3DADC);
   --visor:var(--sc); --visor-ink:#FFFFFF; --glow:color-mix(in srgb,var(--sc) 55%,#FFFFFF); --accent:color-mix(in srgb,var(--sc) 55%,#FFFFFF); --on-accent:#FFFFFF; --prog:color-mix(in srgb,var(--sc) 70%,#FFFFFF);
-  --nav-on:color-mix(in srgb,var(--sc) 60%,transparent); --halo:color-mix(in srgb,var(--sc) 70%,#0B1214);
-  --hero-a:color-mix(in srgb,var(--sc) 85%,#0B1214); --hero-b:color-mix(in srgb,var(--sc) 65%,#0B1214); --hero-c:color-mix(in srgb,var(--sc) 45%,#0B1214); --hero-line:color-mix(in srgb,var(--sc) 70%,#2C3438);
+  --nav-on:color-mix(in srgb,var(--sc) 60%,transparent); --halo:color-mix(in srgb,var(--sc) 70%,var(--d0));
+  --hero-a:color-mix(in srgb,var(--sc) 85%,var(--d0)); --hero-b:color-mix(in srgb,var(--sc) 65%,var(--d0)); --hero-c:color-mix(in srgb,var(--sc) 45%,var(--d0)); --hero-line:color-mix(in srgb,var(--sc) 70%,var(--d3));
   --hero-ink:#FFFFFF; --hero-sub:color-mix(in srgb,var(--sc) 12%,#E3E8EA); --circle:color-mix(in srgb,var(--sc) 70%,#FFFFFF);
-  --t1:color-mix(in srgb,var(--sc) 45%,#141B1E); --t2:color-mix(in srgb,var(--sc) 35%,#141B1E);
+  --t1:color-mix(in srgb,var(--sc) 45%,var(--d1)); --t2:color-mix(in srgb,var(--sc) 35%,var(--d1));
 }}
 :root[data-theme="dark"][data-subj]:not([data-subj=""]){
-  --bg:color-mix(in srgb,var(--sc) 30%,#0B1214); --surface:color-mix(in srgb,var(--sc) 38%,#141B1E); --surface-2:color-mix(in srgb,var(--sc) 50%,#192125); --line:color-mix(in srgb,var(--sc) 58%,#2C3438);
+  --bg:color-mix(in srgb,var(--sc) 30%,var(--d0)); --surface:color-mix(in srgb,var(--sc) 38%,var(--d1)); --surface-2:color-mix(in srgb,var(--sc) 50%,var(--d2)); --line:color-mix(in srgb,var(--sc) 58%,var(--d3));
   --ink:#F7F4F2; --muted:color-mix(in srgb,var(--sc) 18%,#CBD3D6); --soft:color-mix(in srgb,var(--sc) 25%,#A3AEB2); --nav-ink:color-mix(in srgb,var(--sc) 15%,#D3DADC);
   --visor:var(--sc); --visor-ink:#FFFFFF; --glow:color-mix(in srgb,var(--sc) 55%,#FFFFFF); --accent:color-mix(in srgb,var(--sc) 55%,#FFFFFF); --on-accent:#FFFFFF; --prog:color-mix(in srgb,var(--sc) 70%,#FFFFFF);
-  --nav-on:color-mix(in srgb,var(--sc) 60%,transparent); --halo:color-mix(in srgb,var(--sc) 70%,#0B1214);
-  --hero-a:color-mix(in srgb,var(--sc) 85%,#0B1214); --hero-b:color-mix(in srgb,var(--sc) 65%,#0B1214); --hero-c:color-mix(in srgb,var(--sc) 45%,#0B1214); --hero-line:color-mix(in srgb,var(--sc) 70%,#2C3438);
+  --nav-on:color-mix(in srgb,var(--sc) 60%,transparent); --halo:color-mix(in srgb,var(--sc) 70%,var(--d0));
+  --hero-a:color-mix(in srgb,var(--sc) 85%,var(--d0)); --hero-b:color-mix(in srgb,var(--sc) 65%,var(--d0)); --hero-c:color-mix(in srgb,var(--sc) 45%,var(--d0)); --hero-line:color-mix(in srgb,var(--sc) 70%,var(--d3));
   --hero-ink:#FFFFFF; --hero-sub:color-mix(in srgb,var(--sc) 12%,#E3E8EA); --circle:color-mix(in srgb,var(--sc) 70%,#FFFFFF);
-  --t1:color-mix(in srgb,var(--sc) 45%,#141B1E); --t2:color-mix(in srgb,var(--sc) 35%,#141B1E);
+  --t1:color-mix(in srgb,var(--sc) 45%,var(--d1)); --t2:color-mix(in srgb,var(--sc) 35%,var(--d1));
 }
 :root[data-subj]:not([data-subj=""]) body{background:radial-gradient(circle at 88% 0%,color-mix(in srgb,var(--sc) 45%,transparent) 0%,transparent 45%),linear-gradient(160deg,color-mix(in srgb,var(--sc) 20%,var(--bg)) 0%,var(--bg) 50%,color-mix(in srgb,var(--sc) 14%,var(--bg)) 100%);background-attachment:fixed}
 /* glossy subject accents */
