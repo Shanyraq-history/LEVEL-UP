@@ -830,7 +830,7 @@ function renderPlanCurator(){
 
 function renderMaterials(){
   const el = $('#matList'); if (!el) return;
-  const items = S.materials.filter(m => m.subject === S.subject && m.section === S.tab).sort((a,b) => (b.createdAt||0) - (a.createdAt||0));
+  const items = S.materials.filter(m => m.subject === S.subject && m.section === S.tab).sort((a,b) => (a.createdAt||0) - (b.createdAt||0));
   if (!items.length){ el.innerHTML = emptyBox(ROLE()==='curator' ? 'Бұл бөлім бос. Жоғарыдағы формадан алғашқы материалды қосыңыз.' : 'Куратор бұл бөлімге әлі материал қоспады.'); return; }
   el.innerHTML = items.map(m => `<article class="card" style="display:flex;flex-direction:column;gap:8px">
     <h3>${esc(m.title)}</h3>
@@ -845,7 +845,7 @@ function renderMaterials(){
 function clFile(c){ return c.file ? `<div class="actions"><a class="btn sm" href="${esc(fileUrl('materials', c.file.path))}" target="_blank" rel="noopener">📄 ${esc(c.file.name)}</a></div>` : ''; }
 function renderChecklists(){
   const el = $('#clList'); if (!el) return;
-  const items = S.checklists.filter(c => c.subject === S.subject && (c.section || 'checklists') === S.tab).sort((a,b) => (b.createdAt||0) - (a.createdAt||0));
+  const items = S.checklists.filter(c => c.subject === S.subject && (c.section || 'checklists') === S.tab).sort((a,b) => (a.createdAt||0) - (b.createdAt||0));
   if (!items.length){ el.innerHTML = emptyBox(ROLE()==='curator' ? 'Чек-лист әлі жоқ. Жоғарыда біріншісін жасаңыз.' : 'Куратор бұл пәнге әлі чек-лист жарияламады.'); return; }
   const r = ROLE(), studs = studentList();
   el.innerHTML = items.map(c => {
@@ -869,7 +869,7 @@ function renderChecklists(){
 
 function renderTests(){
   const el = $('#testList'); if (!el) return;
-  const items = S.tests.filter(t => t.subject === S.subject && (t.section || 'tests') === S.tab).sort((a,b) => (b.createdAt||0) - (a.createdAt||0));
+  const items = S.tests.filter(t => t.subject === S.subject && (t.section || 'tests') === S.tab).sort((a,b) => (a.createdAt||0) - (b.createdAt||0));
   if (!items.length){ el.innerHTML = emptyBox(ROLE()==='curator' ? 'Тест әлі жоқ. Жоғарыдағы құрастырушымен біріншісін жасаңыз.' : 'Куратор бұл пәнге әлі тест жарияламады.'); return; }
   const r = ROLE(), studs = studentList();
   el.innerHTML = items.map(t => {
