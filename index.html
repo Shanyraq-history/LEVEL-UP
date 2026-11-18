@@ -888,7 +888,7 @@ function renderChecklists(){
 
 // Сұрақ түрлері: бір жауап {answer}, бірнеше жауап {answers:[..]}, сәйкестендіру {left:[..], pairs:[..]}; img — сурет сілтемесі
 const qKind = q => Array.isArray(q.pairs) ? 'match' : Array.isArray(q.answers) ? 'multi' : 'single';
-const qHead = (q, qi) => `<b>${qi+1}. ${esc(q.q)}</b>${(q.img ? [].concat(q.img) : []).map(u => `<img class="qimg" src="${esc(u)}" alt="" loading="lazy">`).join('')}`;
+const qHead = (q, qi) => `<b>${qi+1}. ${esc(String(q.q || '').replace(/^\s*\d+\s*[.)]\s*/, ''))}</b>${(q.img ? [].concat(q.img) : []).map(u => `<img class="qimg" src="${esc(u)}" alt="" loading="lazy">`).join('')}`;
 const sameSet = (a, b) => Array.isArray(a) && Array.isArray(b) && a.length === b.length && [...a].sort().every((x, i) => x === [...b].sort()[i]);
 function qRight(q, a){
   const k = qKind(q);
