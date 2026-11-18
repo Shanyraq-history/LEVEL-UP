@@ -1768,7 +1768,7 @@ function renderStudents(){
   const x = studentStats(s);
   const recent = [...S.tasks].filter(t => t.date <= today()).sort((a,b) => b.date.localeCompare(a.date) || (b.publishedAt||0)-(a.publishedAt||0)).slice(0, 30);
   d.innerHTML = `<article class="card" style="display:flex;flex-direction:column;gap:14px">
-    <div class="thead"><div><p class="eyebrow">Оқушы картасы</p><h2>${esc(s.name)}</h2><p class="muted">${esc(s.group||'')}${s.joinedAt ? ' · тіркелді ' + fmtDT(s.joinedAt) : ''}</p></div><button class="btn sm ghost" data-act="open-stu" data-id="${esc(s.id)}">Жабу</button></div>
+    <div class="thead"><div><p class="eyebrow">Оқушы картасы</p><h2>${esc(s.name)}</h2><p class="muted">${esc(s.group||'')}${s.joinedAt ? ' · тіркелді ' + fmtDT(s.joinedAt) : ''}</p></div><div class="actions"><button class="btn sm ghost danger" data-act="del-stu" data-id="${esc(s.id)}">Оқушыны өшіру</button><button class="btn sm ghost" data-act="open-stu" data-id="${esc(s.id)}">Жабу</button></div></div>
     <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr))">
       <div><p class="eyebrow">Тапсырмалар</p><p class="score num">${x.allDone}/${x.all.length}</p></div>
       <div><p class="eyebrow">Чек-листтер</p><p class="score num">${x.cl}%</p></div>
@@ -1999,6 +1999,24 @@ document.addEventListener('click', async e => {
     if (act === 'del-subj'){ await cur(() => dbDelete('subjects', b.dataset.id), 'Пән өшірілді'); location.hash = 'plan'; return; }
     await cur(() => dbDelete(b.dataset.col, b.dataset.id), 'Өшірілді');
     return;
+  }
+  if (act === 'del-stu'){
+    const st = S.students[b.dataset.id]; if (!st) return;
+    if (!b.dataset.armed){ b.dataset.armed = '1'; const old = b.textContent; b.textContent = `${firstName(st.name)} толық өшірілсін бе? Растау`; setTimeout(() => { if (b.isConnected){ delete b.dataset.armed; b.textContent = old; } }, 4000); return; }
+    b.disabled = true;
+    const proofs = Object.values(S.progress[st.id]?.tasks || {}).flatMap(tp => (tp.proofs || []).map(p => p.path)).filter(Boolean);
+    const files = S.own.filter(t => t.owner === st.id).flatMap(t => (t.attachments || []).map(a => a.path)).filter(Boolean);
+    try {
+      await q(sb.rpc('delete_student', { uid: st.id }));
+      if (proofs.length){ try { await sb.storage.from('proofs').remove(proofs); } catch {} }
+      if (files.length){ try { await sb.storage.from('materials').remove(files); } catch {} }
+      S.openStudent = null; delete S.students[st.id]; delete S.progress[st.id];
+      await loadAll(); toast(`${st.name} өшірілді`);
+    } catch (e){
+      console.warn(e); b.disabled = false;
+      toast(/function|schema cache|does not exist|PGRST202/i.test(e && e.message || '') ? 'Алдымен Supabase-те 011_delete_student.sql іске қосыңыз.' : 'Өшірілмеді: ' + (e && e.message ? e.message : 'қате'), 8000);
+    }
+    renderData(); return;
   }
   if (act === 'publish-draft'){
     const d = S.drafts.find(x => x.id === b.dataset.id); if (!d) return;
