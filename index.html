@@ -513,7 +513,7 @@ function renderAuth(){
     <h2>${reg ? 'Сәлем! Мен — Робот X. Тіркелейік.' : 'Сәлем! Қайта келгеніңе қуаныштымын.'}</h2>
     <div class="authtabs" role="tablist"><button type="button" data-auth="login" class="${reg ? '' : 'on'}">Кіру</button><button type="button" data-auth="register" class="${reg ? 'on' : ''}">Тіркелу</button></div>
     ${reg ? `<div class="row2"><label class="f">Тегі<input id="aLast" required maxlength="40" autocomplete="family-name"></label><label class="f">Аты<input id="aFirst" required maxlength="40" autocomplete="given-name"></label></div>
-    <label class="f">Поток<input id="aGroup" maxlength="40" placeholder="Мысалы: 01.11"></label>` : ''}
+    <label class="f">Поток<input id="aGroup" maxlength="40" placeholder="Мысалы: 01, 11"></label>` : ''}
     <label class="f">Логин<input id="aLogin" required autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="мысалы: ayaulym.s"></label>
     <label class="f">Пароль<input id="aPass" type="password" required minlength="6" autocomplete="${reg ? 'new-password' : 'current-password'}"></label>
     ${reg ? '<p style="font-size:.82rem">Логин: латын әріптері, сандар, нүкте немесе сызықша (3–32 таңба). Пароль кемінде 6 таңба. Оларды ұмытпа!</p>' : ''}
@@ -653,7 +653,7 @@ function renderShell(){
       <h2>Сәлем! Мен — Робот X, сенің оқу көмекшің.</h2>
       <p>Танысайық. Атың мен тобыңды жаз, сонда күндік жоспарың ашылады және куратор нәтижеңді көреді.</p>
       <label class="f">Аты-жөні<input id="rName" required maxlength="60" autocomplete="name"></label>
-      <label class="f">Поток<input id="rGroup" maxlength="40" placeholder="Мысалы: 01.11"></label>
+      <label class="f">Поток<input id="rGroup" maxlength="40" placeholder="Мысалы: 01, 11"></label>
       <p class="err" id="rErr" hidden></p>
       <div class="actions"><button class="btn primary">Оқуды бастау</button></div></form></section>`;
     $('#main').innerHTML = html; return;
