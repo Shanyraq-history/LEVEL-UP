@@ -96,6 +96,7 @@ main{min-width:0;display:flex;flex-direction:column;gap:20px}
 .composer{display:grid;gap:12px;border-style:dashed;box-shadow:none;background:transparent}
 .atts{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .atts .btn{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stutabs{max-width:320px;margin:0 0 12px}
 .composer .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
 label.f{display:flex;flex-direction:column;gap:5px;font-size:.82rem;font-weight:500;color:var(--muted)}
 .f input,.f textarea,.f select,input.t{padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);width:100%;font-size:.95rem}
@@ -761,8 +762,9 @@ function renderShell(){
   } else if (v === 'mistakes'){
     html += `<section class="vhead"><div><p class="eyebrow">Шолу</p><h1>Қатемен жұмыс</h1><p class="lead">Барлық тесттерде қате жауап берген сұрақтарың осында жиналады. Қайта өтіп, дұрыс жауап берсең, сұрақ тізімнен өзі шығады.</p></div></section><div id="mistBox"></div>`;
   } else if (v === 'students'){
-    html += `<section class="vhead"><div><p class="eyebrow">Оқушылар</p><h1>Оқушылар</h1><p class="lead">Әр оқушының тапсырмалары, дәлелдері, чек-лист пен тест нәтижелері.</p></div></section>
-      <div class="datectl"><span class="muted">Күн:</span><button class="btn sm" data-act="day" data-d="-1">‹</button><input type="date" id="planDate" value="${S.date}"><button class="btn sm" data-act="day" data-d="1">›</button><button class="btn sm ghost" data-act="today">Бүгін</button></div><div id="stuList"></div><div id="stuDetail"></div>`;
+    html += `<section class="vhead"><div><p class="eyebrow">Оқушылар</p><h1>Оқушылар</h1><p class="lead">«Күндік» — таңдалған күннің тапсырмалары мен дәлелдері. «Жалпы» — барлық күндер бойынша пайыздар.</p></div></section>
+      <div class="authtabs stutabs" role="tablist"><button type="button" data-act="stu-tab" data-v="day" class="${S.stuTab === 'all' ? '' : 'on'}">Күндік</button><button type="button" data-act="stu-tab" data-v="all" class="${S.stuTab === 'all' ? 'on' : ''}">Жалпы</button></div>
+      <div class="datectl" id="stuDate" ${S.stuTab === 'all' ? 'hidden' : ''}><span class="muted">Күн:</span><button class="btn sm" data-act="day" data-d="-1">‹</button><input type="date" id="planDate" value="${S.date}"><button class="btn sm" data-act="day" data-d="1">›</button><button class="btn sm ghost" data-act="today">Бүгін</button></div><div id="stuList"></div><div id="stuDetail"></div>`;
   }
   $('#main').innerHTML = html;
   if (v === 'subject' && curSec() && curSec().kind === 'test' && r === 'curator') addQ();
@@ -1057,22 +1059,29 @@ function studentStats(s){
   const since = s.joinedAt ? ymd(new Date(s.joinedAt)) : '0000';
   const all = S.tasks.filter(t => t.date >= since && t.date <= today());
   const allDone = all.filter(t => p.tasks?.[t.id]?.done).length;
+  const allProof = all.filter(t => p.tasks?.[t.id]?.proofs?.length).length;
   const tests = Object.values(p.tests || {});
   const testAvg = tests.length ? Math.round(tests.reduce((a,x)=>a+pct(x.score,x.total),0)/tests.length) : null;
   let clN = 0, clT = 0; S.checklists.forEach(c => { const its = c.items||[]; clT += its.length; clN += its.filter((_,i)=>p.checks?.[c.id]?.[i]).length; });
-  return { p, dayTasks, dayDone, dayProof, all, allDone, testAvg, cl: pct(clN, clT) };
+  return { p, dayTasks, dayDone, dayProof, all, allDone, allProof, testAvg, cl: pct(clN, clT) };
 }
 function renderStudents(){
   const el = $('#stuList'); if (!el) return;
   const studs = studentList();
   if (!studs.length){ el.innerHTML = emptyBox('Әзірге тіркелген оқушы жоқ. Сайт сілтемесін оқушыларға жіберіңіз: олар алғаш кіргенде аты-жөнін жазып тіркеледі.'); $('#stuDetail').innerHTML=''; return; }
-  el.innerHTML = `<div class="tablewrap"><table><thead><tr><th>Оқушы</th><th>Поток</th><th>${esc(fmtDate(S.date))}</th><th>Дәлел</th><th>Барлық тапсырма</th><th>Чек-лист</th><th>Тест</th></tr></thead><tbody>
-    ${studs.map(s => { const x = studentStats(s); return `<tr data-act="open-stu" data-id="${esc(s.id)}" class="${S.openStudent===s.id?'open':''}" tabindex="0">
-      <td><b>${esc(s.name)}</b></td><td class="muted">${esc(s.group||'—')}</td>
-      <td>${x.dayTasks.length ? `<span class="chip ${x.dayDone===x.dayTasks.length?'ok':(S.date<today()?'bad':'')}">${x.dayDone}/${x.dayTasks.length}</span>` : '<span class="muted">—</span>'}</td>
-      <td class="num">${x.dayTasks.length ? x.dayProof + '/' + x.dayTasks.length : '—'}</td>
-      <td><span class="mini"><span class="bar"><i style="width:${pct(x.allDone,x.all.length)}%"></i></span><span class="num">${pct(x.allDone,x.all.length)}%</span></span></td>
-      <td class="num">${x.cl}%</td><td class="num">${x.testAvg===null?'—':x.testAvg+'%'}</td></tr>`; }).join('')}
+  const all = S.stuTab === 'all';
+  document.querySelectorAll('[data-act="stu-tab"]').forEach(b => b.classList.toggle('on', b.dataset.v === (all ? 'all' : 'day')));
+  const sd = $('#stuDate'); if (sd) sd.hidden = all;
+  const bar = v => `<span class="mini"><span class="bar"><i style="width:${v}%"></i></span><span class="num">${v}%</span></span>`;
+  const row = (s, cells) => `<tr data-act="open-stu" data-id="${esc(s.id)}" class="${S.openStudent===s.id?'open':''}" tabindex="0"><td><b>${esc(s.name)}</b></td><td class="muted">${esc(s.group||'—')}</td>${cells}</tr>`;
+  el.innerHTML = all
+    ? `<div class="tablewrap"><table><thead><tr><th>Оқушы</th><th>Поток</th><th>Тапсырмалар</th><th>Дәлел</th><th>Чек-лист</th><th>Тест</th></tr></thead><tbody>
+    ${studs.map(s => { const x = studentStats(s); return row(s, `<td>${bar(pct(x.allDone, x.all.length))}</td><td>${bar(pct(x.allProof, x.all.length))}</td><td class="num">${x.cl}%</td><td class="num">${x.testAvg===null?'—':x.testAvg+'%'}</td>`); }).join('')}
+  </tbody></table></div>`
+    : `<div class="tablewrap"><table><thead><tr><th>Оқушы</th><th>Поток</th><th>Орындалды · ${esc(fmtDate(S.date))}</th><th>Дәлел</th></tr></thead><tbody>
+    ${studs.map(s => { const x = studentStats(s), n = x.dayTasks.length; if (!n) return row(s, '<td class="muted">—</td><td class="muted">—</td>');
+      const v = pct(x.dayDone, n), cls = x.dayDone === n ? 'ok' : (S.date < today() ? 'bad' : '');
+      return row(s, `<td><span class="mini"><span class="bar"><i style="width:${v}%"></i></span><span class="chip ${cls}">${v}%</span><span class="num muted">${x.dayDone}/${n}</span></span></td><td><span class="chip ${x.dayProof === n ? 'ok' : ''} num">${x.dayProof}/${n}</span></td>`); }).join('')}
   </tbody></table></div>`;
   const d = $('#stuDetail'); const s = S.students[S.openStudent];
   if (!s){ d.innerHTML = ''; return; }
@@ -1150,6 +1159,7 @@ document.addEventListener('click', async e => {
     return;
   }
   if (act === 'toggle-task'){ S.openTasks[b.dataset.id] = !S.openTasks[b.dataset.id]; renderData(); return; }
+  if (act === 'stu-tab'){ S.stuTab = b.dataset.v; renderData(); return; }
   if (act === 'open-stu'){ S.openStudent = S.openStudent === b.dataset.id ? null : b.dataset.id; renderData(); if (S.openStudent) $('#stuDetail').scrollIntoView({ behavior:'smooth', block:'start' }); return; }
   if (act === 'open-test'){ delete S.testChecked[b.dataset.id]; delete S.testDraft[b.dataset.id]; S.testOpen = S.testOpen === b.dataset.id ? null : b.dataset.id; renderData(); return; }
   if (act === 'add-q'){ addQ(); return; }
