@@ -514,9 +514,9 @@ function renderAuth(){
     <div class="authtabs" role="tablist"><button type="button" data-auth="login" class="${reg ? '' : 'on'}">Кіру</button><button type="button" data-auth="register" class="${reg ? 'on' : ''}">Тіркелу</button></div>
     ${reg ? `<div class="row2"><label class="f">Тегі<input id="aLast" required maxlength="40" autocomplete="family-name"></label><label class="f">Аты<input id="aFirst" required maxlength="40" autocomplete="given-name"></label></div>
     <label class="f">Поток<input id="aGroup" maxlength="40" placeholder="Мысалы: 01, 11"></label>` : ''}
-    <label class="f">Логин<input id="aLogin" required autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="мысалы: ayaulym.s"></label>
+    <label class="f">Логин<input id="aLogin" required autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="мысалы: ayau_juz40"></label>
     <label class="f">Пароль<input id="aPass" type="password" required minlength="6" autocomplete="${reg ? 'new-password' : 'current-password'}"></label>
-    ${reg ? '<p style="font-size:.82rem">Логин: латын әріптері, сандар, нүкте немесе сызықша (3–32 таңба). Пароль кемінде 6 таңба. Оларды ұмытпа!</p>' : ''}
+    ${reg ? '<p style="font-size:.82rem">Логин: латын әріптері, сандар, астын сызу (_), нүкте немесе сызықша (3–32 таңба). Пароль кемінде 6 таңба. Оларды ұмытпа!</p>' : ''}
     <p class="err" id="aErr" hidden></p>
     <div class="actions"><button class="btn primary" id="aBtn">${reg ? 'Тіркелу' : 'Кіру'}</button></div></form></div>`;
 }
@@ -1083,7 +1083,7 @@ document.addEventListener('submit', async e => {
     e.preventDefault();
     const reg = S.authMode === 'register';
     const login = $('#aLogin').value.trim().toLowerCase(), pass = $('#aPass').value;
-    if (!LOGIN_RE.test(login)) return authErr('Логин тек латын әріптері, сандар, нүкте немесе сызықшадан тұруы керек (3–32 таңба).');
+    if (!LOGIN_RE.test(login)) return authErr('Логин тек латын әріптері, сандар, астын сызу (_), нүкте немесе сызықшадан тұруы керек (3–32 таңба).');
     if (pass.length < 6) return authErr('Пароль кемінде 6 таңба болуы керек.');
     let name = '';
     let first = '', last = '';
