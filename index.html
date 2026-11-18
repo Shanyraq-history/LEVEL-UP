@@ -1238,7 +1238,7 @@ function renderMaterials(){
   const card = m => { const lk = m.link ? safeUrl(m.link) : '', yt = /(^|\.)(youtube\.com|youtu\.be)$/i.test(lk ? new URL(lk).hostname : ''), on = !cur && !!seen[m.id];
     const nSeen = cur ? studs.filter(st => S.progress[st.id]?.seen?.[m.id]).length : 0;
     return `<article class="card ${on ? 'seen' : ''}" style="display:flex;flex-direction:column;gap:8px">
-    <h3>${lk ? `<a class="mtitle" href="${esc(lk)}" target="_blank" rel="noopener">${yt ? '<span class="yt" aria-label="YouTube">▶</span>' : ''}${esc(m.title)} <span class="arr">↗</span></a>` : esc(m.title)}</h3>
+    <h3>${lk ? `<a class="mtitle" href="${esc(lk)}" target="_blank" rel="noopener"><span class="yt" aria-hidden="true">▶</span>${esc(m.title)} <span class="arr">↗</span></a>` : esc(m.title)}</h3>
     ${m.desc ? `<p class="tdesc">${esc(m.desc)}</p>` : ''}
     <div class="actions" style="margin-top:auto;align-items:center">
       ${lk ? `<a class="btn sm" href="${esc(lk)}" target="_blank" rel="noopener">Ашу ↗</a>` : ''}
