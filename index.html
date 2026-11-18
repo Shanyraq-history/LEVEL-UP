@@ -494,8 +494,12 @@ th{font-family:var(--f-body);font-weight:700;color:var(--soft)}
 .fcopy p{font-size:.74rem;color:var(--muted);line-height:1.5;margin:4px 0 10px}
 .fcopy .btn{background:var(--t1);border:0;color:var(--accent)}
 .fcopy .btn.running{background:var(--ok-bg);color:var(--ok)}
-.fcopy .btn.ghost{background:none;color:var(--muted);padding:5px 8px}
-.fcopy .actions{gap:4px}
+.factions .btn.ghost{background:var(--surface-2);color:var(--muted);padding:0;width:34px;height:32px;flex:0 0 34px;border-radius:10px}
+.factions .btn.ghost:hover{background:var(--surface-2);color:var(--accent)}
+.factions .btn.ghost svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.factions{margin-top:12px;flex-wrap:nowrap;gap:4px}
+.factions #fBtn{flex:1 1 auto;background:var(--t1);border:0;color:var(--accent)}
+.factions #fBtn.running{background:var(--ok-bg);color:var(--ok)}
 .fpill.brk{background:var(--warn-bg);color:var(--warn)}
 .ring.brk{background:conic-gradient(var(--warn) 0 var(--p),var(--surface-2) var(--p) 100%)}
 .fset{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;margin-top:14px;border-top:1px solid var(--line);padding-top:12px}
@@ -1452,8 +1456,8 @@ function focusHtml(){
   const c = focusCfg(), f = S.focus;
   return `<section class="rbox focus"><div class="fhead"><h3>Фокус бұрышы 🍵</h3><span class="fpill" id="fPhase">Оқу</span></div>
     <div class="fmain"><div class="ring" id="fRing"><div class="ring-in"><strong class="num" id="fText">--:--</strong></div></div>
-    <div class="fcopy"><b>${c.study} мин оқу · ${c.brk} мин демалыс</b><p>Уақыт біткенде дыбыс шығады да, келесі кезең өзі басталады.</p>
-    <div class="actions"><button type="button" class="btn sm" id="fBtn" data-act="focus"></button><button type="button" class="btn sm ghost" data-act="focus-reset" aria-label="Басынан бастау" title="Басынан бастау">↺</button><button type="button" class="btn sm ghost" data-act="focus-edit" aria-label="Минуттарды өзгерту" title="Минуттарды өзгерту">⚙</button></div></div></div>
+    <div class="fcopy"><b>${c.study} мин оқу · ${c.brk} мин демалыс</b><p>Уақыт біткенде дыбыс шығады да, келесі кезең өзі басталады.</p></div></div>
+    <div class="actions factions"><button type="button" class="btn sm" id="fBtn" data-act="focus"></button><button type="button" class="btn sm ghost" data-act="focus-reset" aria-label="Басынан бастау" title="Басынан бастау"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.3-5.6M4 4v4.5h4.5"/></svg></button><button type="button" class="btn sm ghost" data-act="focus-edit" aria-label="Минуттарды өзгерту" title="Минуттарды өзгерту"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button></div>
     ${f.edit ? `<form class="fset" id="focusForm"><label class="f">Оқу, мин<input type="number" id="fStudy" min="1" max="180" value="${c.study}" required></label><label class="f">Демалыс<input type="number" id="fBrk" min="1" max="180" value="${c.brk}" required></label><button class="btn sm primary">Сақтау</button></form>` : ''}
   </section>`;
 }
