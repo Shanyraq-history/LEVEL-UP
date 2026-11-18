@@ -863,6 +863,25 @@ async function upMat(path, fi, btn){
     return { path, name:fi.name };
   } finally { if (btn) btn.textContent = old; }
 }
+/* upload several files one by one; each becomes its own row. Returns number saved. */
+async function addFiles(files, btn, mkRow, table){
+  const list = [...files].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric:true, sensitivity:'base' }));
+  const old = btn.textContent; let ok = 0; const bad = [];
+  for (let i = 0; i < list.length; i++){
+    const fi = list[i];
+    btn.textContent = list.length > 1 ? `Жүктелуде ${i + 1}/${list.length}…` : `Жүктелуде… ${mb(fi.size)}`;
+    try {
+      const file = await upMat(`${S.subject}/${Date.now()}-${i}-${safeName(fi.name)}`, fi, null);
+      await q(sb.from(table).insert(mkRow(fi, file, list.length)));
+      ok++;
+    } catch (err){ console.warn(err); bad.push(fi.name + ': ' + (err.message || 'қате')); }
+  }
+  btn.textContent = old;
+  try { await loadAll(); } catch {}
+  if (bad.length) toast(`${ok} қосылды, ${bad.length} қосылмады. ${bad.join(' · ')}`, 12000);
+  else toast(ok > 1 ? `${ok} файл қосылды` : 'Қосылды');
+  return ok;
+}
 async function q(p){ const { data, error } = await p; if (error) throw error; return data; }
 S.urls = {}; S.urlsAt = Date.now(); S.authMode = 'login';
 
@@ -1267,7 +1286,7 @@ function renderShell(){
         <div class="row"><label class="f">Атауы (міндетті емес)<input id="mTitle" maxlength="140" placeholder="${esc(tb.ph || 'Бос қалса, файлдың атауы қойылады')}"></label>
         <label class="f">Сілтеме (міндетті емес)<input id="mLink" type="url" placeholder="${S.tab === 'analysis' ? 'YouTube сілтемесі: https://youtu.be/…' : 'https://'}"></label></div>
         <label class="f">Сипаттама<textarea id="mDesc" maxlength="4000"></textarea></label>
-        <div class="actions"><label class="btn upload">PDF / файл тіркеу<input type="file" id="mFile" accept=".pdf,application/pdf,image/*,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip,.txt"></label><span id="mFileName" class="muted" style="font-size:.85rem"></span><button class="btn primary" type="submit" style="margin-left:auto">Қосу</button></div>
+        <div class="actions"><label class="btn upload">PDF / файлдар тіркеу<input type="file" id="mFile" multiple accept=".pdf,application/pdf,image/*,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip,.txt"></label><span id="mFileName" class="muted" style="font-size:.85rem"></span><button class="btn primary" type="submit" style="margin-left:auto">Қосу</button></div>
       </form>`;
       html += `<div id="matList" class="grid"></div>`;
     } else if (tb.kind === 'check'){
@@ -1275,7 +1294,7 @@ function renderShell(){
         <h2>${esc(tb.name)}: жаңа чек-лист</h2>
         <label class="f">Атауы (міндетті емес)<input id="cTitle" maxlength="140" placeholder="Бос қалса, файлдың атауы қойылады"></label>
         <label class="f">Пункттер (әрқайсысы жаңа жолдан; PDF тіркесеңіз, бос қалдыруға болады)<textarea id="cItems" placeholder="Формулаларды жаттау\n10 есеп шығару\nҚателерді талдау"></textarea></label>
-        <div class="actions"><label class="btn upload">PDF / файл тіркеу<input type="file" id="cFile" accept=".pdf,application/pdf,image/*,.doc,.docx"></label><span id="cFileName" class="muted" style="font-size:.85rem"></span><button class="btn primary" type="submit" style="margin-left:auto">Жариялау</button></div></form>`;
+        <div class="actions"><label class="btn upload">PDF / файлдар тіркеу<input type="file" id="cFile" multiple accept=".pdf,application/pdf,image/*,.doc,.docx"></label><span id="cFileName" class="muted" style="font-size:.85rem"></span><button class="btn primary" type="submit" style="margin-left:auto">Жариялау</button></div></form>`;
       html += `<div id="clList" class="grid"></div>`;
     } else {
       if (r === 'curator') html += `<form class="card composer" id="testForm">
@@ -1910,8 +1929,7 @@ document.addEventListener('change', async e => {
   const t = e.target;
   if (t.id === 'planDate'){ if (t.value){ S.date = t.value; syncDate(); } return; }
   if (t.id === 'tFiles'){ $('#tFilesName').textContent = [...t.files].map(x => x.name).join(', '); return; }
-  if (t.id === 'mFile'){ $('#mFileName').textContent = t.files[0] ? t.files[0].name : ''; return; }
-  if (t.id === 'cFile'){ $('#cFileName').textContent = t.files[0] ? t.files[0].name : ''; return; }
+  if (t.id === 'mFile' || t.id === 'cFile'){ const n = t.files.length; $(t.id === 'mFile' ? '#mFileName' : '#cFileName').textContent = n > 1 ? `${n} файл таңдалды: әрқайсысы бөлек қосылады` : (n ? t.files[0].name : ''); return; }
   if (t.id === 'tSubj'){ fillSecSelect(); return; }
   if (t.dataset.act === 'tick'){
     const tid = t.dataset.t, done = t.checked;
@@ -2023,27 +2041,29 @@ document.addEventListener('submit', async e => {
   }
   if (f.id === 'matForm'){
     e.preventDefault();
-    const fi = $('#mFile').files[0], lnk = $('#mLink').value.trim();
-    const title = $('#mTitle').value.trim() || (fi ? baseName(fi.name) : '');
-    if (!title){ toast(lnk ? 'Сілтемеге атау жазыңыз' : 'Атау жазыңыз немесе файл тіркеңіз'); return; }
-    const btn = f.querySelector('[type=submit]'); btn.disabled = true;
-    let file = null;
-    if (fi){
-      try { file = await upMat(`${S.subject}/${Date.now()}-${safeName(fi.name)}`, fi, btn); }
-      catch (err){ console.warn(err); toast(err.message, 9000); btn.disabled = false; return; }
+    const files = $('#mFile').files, lnk = $('#mLink').value.trim(), t0 = $('#mTitle').value.trim(), descr = $('#mDesc').value.trim();
+    const btn = f.querySelector('[type=submit]');
+    if (files.length){
+      btn.disabled = true;
+      await addFiles(files, btn, (fi, file, n) => ({ subject:S.subject, section:S.tab, title:(n === 1 && t0) || baseName(fi.name), descr: n === 1 ? descr : '', link: n === 1 ? lnk : '', file_path:file.path, file_name:file.name }), 'materials');
+      f.reset(); $('#mFileName').textContent = ''; btn.disabled = false; return;
     }
-    await cur(() => q(sb.from('materials').insert({ subject:S.subject, section:S.tab, title, descr:$('#mDesc').value.trim(), link:$('#mLink').value.trim(), file_path:file ? file.path : null, file_name:file ? file.name : null })), 'Қосылды');
+    if (!t0){ toast(lnk ? 'Сілтемеге атау жазыңыз' : 'Атау жазыңыз немесе файл тіркеңіз'); return; }
+    btn.disabled = true;
+    await cur(() => q(sb.from('materials').insert({ subject:S.subject, section:S.tab, title:t0, descr, link:lnk, file_path:null, file_name:null })), 'Қосылды');
     f.reset(); $('#mFileName').textContent = ''; btn.disabled = false; return;
   }
   if (f.id === 'clForm'){
     e.preventDefault();
     const items = $('#cItems').value.split('\n').map(s => s.trim()).filter(Boolean);
-    const fi = $('#cFile').files[0];
-    if (!items.length && !fi){ toast('Пункттерді жазыңыз немесе PDF тіркеңіз'); return; }
+    const files = $('#cFile').files, t0 = $('#cTitle').value.trim();
+    if (!items.length && !files.length){ toast('Пункттерді жазыңыз немесе PDF тіркеңіз'); return; }
     const btn = f.querySelector('[type=submit]'); btn.disabled = true;
-    let file = null;
-    if (fi){ try { file = await upMat(`${S.subject}/${Date.now()}-${safeName(fi.name)}`, fi, btn); } catch (err){ console.warn(err); toast(err.message, 9000); btn.disabled = false; return; } }
-    await cur(() => q(sb.from('checklists').insert({ subject:S.subject, section:S.tab, title:$('#cTitle').value.trim() || (fi ? baseName(fi.name) : 'Чек-лист'), items, file_path:file ? file.path : null, file_name:file ? file.name : null })), 'Чек-лист жарияланды');
+    if (files.length){
+      await addFiles(files, btn, (fi, file, n) => ({ subject:S.subject, section:S.tab, title:(n === 1 && t0) || baseName(fi.name), items: n === 1 ? items : [], file_path:file.path, file_name:file.name }), 'checklists');
+    } else {
+      await cur(() => q(sb.from('checklists').insert({ subject:S.subject, section:S.tab, title:t0 || 'Чек-лист', items, file_path:null, file_name:null })), 'Чек-лист жарияланды');
+    }
     f.reset(); $('#cFileName').textContent = ''; btn.disabled = false; return;
   }
   if (f.id === 'testForm'){
