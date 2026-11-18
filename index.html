@@ -380,6 +380,16 @@ h1{font-weight:700;letter-spacing:-.02em}
 .top .themebtn{width:42px;padding:0}
 .greet .gb{background:var(--visor);color:var(--visor-ink);box-shadow:0 8px 18px rgba(23,64,78,.18);border-radius:14px;border-top-right-radius:4px}
 .greet .gb small{color:color-mix(in srgb,var(--visor-ink) 70%,transparent)}
+/* header NOVA: only the robot, frozen in place while scrolling */
+.greet .gb{display:none}
+.greet{width:44px;height:50px;flex:0 0 44px;justify-content:center}
+#gBot{position:fixed;z-index:30;top:var(--nova-top,calc(env(safe-area-inset-top,0px) + 18px));right:var(--nova-right,max(16px,env(safe-area-inset-right,0px)));display:block;line-height:0;filter:drop-shadow(0 6px 10px rgba(23,64,78,.18))}
+#gBot .bot-eyes{animation:blinkHi 3.6s infinite}
+#gBot .bot-mouth{animation:smile 3.6s ease-in-out infinite;transform-origin:100px 75px}
+@keyframes blinkHi{0%,40%,48%,84%,100%{transform:scaleY(1)}44%,88%{transform:scaleY(.1)}91%{transform:scaleY(1)}94%{transform:scaleY(.1)}}
+@keyframes smile{0%,15%,65%,100%{transform:scale(1)}25%,55%{transform:scale(1.35,1.3)}}
+@media (max-width:560px){ .greet{width:36px;height:42px;flex-basis:36px} }
+@media (prefers-reduced-motion:reduce){ #gBot .bot-eyes,#gBot .bot-mouth{animation:none} }
 
 /* surfaces */
 .card{border-radius:21px;padding:20px 22px}
@@ -684,7 +694,7 @@ function bot(cls = ''){
       <path d="M71 66a10 10 0 0 1 20 0z" fill="#3FE3F7"/>
       <path d="M109 66a10 10 0 0 1 20 0z" fill="#3FE3F7"/>
     </g>
-    <path d="M92 75h16a8 8 0 0 1-16 0z" fill="#3FE3F7"/>
+    <path class="bot-mouth" d="M92 75h16a8 8 0 0 1-16 0z" fill="#3FE3F7"/>
   </g></svg>`;
 }
 
@@ -929,6 +939,16 @@ function afterRole(){
 }
 
 /* ---------- corner greeting ---------- */
+function placeNova(){
+  const g = $('#greet'), b = $('#gBot'); if (!g || !b) return;
+  if (g.hidden){ b.style.display = 'none'; return; }
+  b.style.display = '';
+  const r = g.getBoundingClientRect(); if (!r.width) return;
+  b.style.setProperty('--nova-top', Math.max(6, r.top + scrollY) + 'px');
+  b.style.setProperty('--nova-right', Math.max(6, document.documentElement.clientWidth - r.right) + 'px');
+}
+addEventListener('resize', placeNova); addEventListener('load', placeNova);
+new MutationObserver(placeNova).observe(document.querySelector('header.top'), { attributes:true, attributeFilter:['hidden','class'], subtree:true, childList:true });
 function renderGreet(){
   const t = pubTasks(today()); const m = MY();
   const done = t.filter(x => m.tasks?.[x.id]?.done).length;
@@ -942,6 +962,7 @@ function renderGreet(){
     else { title = `Сәлем, ${S.me.first || firstName(S.me.name)}!`; sub = t.length ? (done === t.length ? 'Бүгінгі жоспар орындалды!' : `Бүгін: ${done}/${t.length} орындалды`) : 'Бүгінге тапсырма әзірге жоқ'; }
   }
   $('#gTitle').textContent = title; $('#gSub').textContent = sub;
+  $('#greet').title = title; placeNova();
 }
 
 /* ---------- routing ---------- */
