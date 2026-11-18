@@ -268,6 +268,8 @@ img{max-width:100%}
 .authtabs button{flex:1;border:0;background:none;color:#9FB6CB;padding:8px;border-radius:9px;font-weight:500;cursor:pointer}
 .authtabs button.on{background:var(--glow);color:#06202B}
 .greet{margin-left:0}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:420px){.row2{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -489,7 +491,7 @@ function renderAuth(){
     <p class="eyebrow" style="color:var(--glow)">LEVEL UP · ${reg ? 'тіркелу' : 'кіру'}</p>
     <h2>${reg ? 'Сәлем! Мен — Робот X. Тіркелейік.' : 'Сәлем! Қайта келгеніңе қуаныштымын.'}</h2>
     <div class="authtabs" role="tablist"><button type="button" data-auth="login" class="${reg ? '' : 'on'}">Кіру</button><button type="button" data-auth="register" class="${reg ? 'on' : ''}">Тіркелу</button></div>
-    ${reg ? `<label class="f">Аты-жөні<input id="aName" required maxlength="60" autocomplete="name"></label>
+    ${reg ? `<div class="row2"><label class="f">Тегі<input id="aLast" required maxlength="40" autocomplete="family-name"></label><label class="f">Аты<input id="aFirst" required maxlength="40" autocomplete="given-name"></label></div>
     <label class="f">Сынып / топ<input id="aGroup" maxlength="40" placeholder="Мысалы: 11А"></label>` : ''}
     <label class="f">Логин<input id="aLogin" required autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="мысалы: ayaulym.s"></label>
     <label class="f">Пароль<input id="aPass" type="password" required minlength="6" autocomplete="${reg ? 'new-password' : 'current-password'}"></label>
@@ -522,8 +524,9 @@ async function startSession(session){
   if (!prof){ await sb.auth.signOut(); S.role = 'anon'; setAuthView(true); renderAuth(); authErr('Профиль табылмады. Куратормен байланыс.'); return; }
   S.profile = prof;
   S.role = prof.role === 'curator' ? 'curator' : 'student';
-  S.me = { name: prof.full_name || prof.login, group: prof.grp }; S.meLoaded = true;
-  S.myName = firstName(prof.full_name || prof.login);
+  S.me = { name: prof.full_name || prof.login, group: prof.grp, first: (session.user.user_metadata || {}).first_name || '' }; S.meLoaded = true;
+  const um = session.user.user_metadata || {};
+  S.myName = um.first_name || firstName(prof.full_name || prof.login);
   setAuthView(false); afterRole();
   try { await loadAll(); } catch (e){ console.warn(e); toast('Деректер жүктелмеді. Бетті жаңартып көр.'); }
 }
@@ -558,7 +561,7 @@ function renderGreet(){
   else if (S.role === 'student'){
     if (!S.meLoaded) {}
     else if (!S.me){ title = 'Сәлем! Мен — Робот X'; sub = 'Танысайық: атыңды жаз'; }
-    else { title = `Сәлем, ${firstName(S.me.name)}!`; sub = t.length ? (done === t.length ? 'Бүгінгі жоспар орындалды!' : `Бүгін: ${done}/${t.length} орындалды`) : 'Бүгінге тапсырма әзірге жоқ'; }
+    else { title = `Сәлем, ${S.me.first || firstName(S.me.name)}!`; sub = t.length ? (done === t.length ? 'Бүгінгі жоспар орындалды!' : `Бүгін: ${done}/${t.length} орындалды`) : 'Бүгінге тапсырма әзірге жоқ'; }
   }
   $('#gTitle').textContent = title; $('#gSub').textContent = sub;
 }
@@ -1030,16 +1033,17 @@ document.addEventListener('submit', async e => {
     if (!LOGIN_RE.test(login)) return authErr('Логин тек латын әріптері, сандар, нүкте немесе сызықшадан тұруы керек (3–32 таңба).');
     if (pass.length < 6) return authErr('Пароль кемінде 6 таңба болуы керек.');
     let name = '';
-    if (reg){ name = $('#aName').value.trim(); if (!name) return authErr('Аты-жөніңді жаз.'); }
+    let first = '', last = '';
+    if (reg){ last = $('#aLast').value.trim(); first = $('#aFirst').value.trim(); if (!last) return authErr('Тегіңді жаз.'); if (!first) return authErr('Атыңды жаз.'); name = `${last} ${first}`; }
     const btn = $('#aBtn'); btn.disabled = true; btn.textContent = 'Күте тұр…'; $('#aErr').hidden = true;
     try {
       let res;
-      if (reg) res = await sb.auth.signUp({ email: loginEmail(login), password: pass, options: { data: { login, full_name: name, grp: $('#aGroup').value.trim() } } });
+      if (reg) res = await sb.auth.signUp({ email: loginEmail(login), password: pass, options: { data: { login, full_name: name, first_name: first, last_name: last, grp: $('#aGroup').value.trim() } } });
       else res = await sb.auth.signInWithPassword({ email: loginEmail(login), password: pass });
       if (res.error) throw res.error;
       if (!res.data.session) throw new Error('confirm');
       await startSession(res.data.session);
-      if (reg) toast(`Танысқаныма қуаныштымын, ${firstName(name)}!`);
+      if (reg) toast(`Танысқаныма қуаныштымын, ${first}!`);
     } catch (err){ authErr(authMsg(err)); }
     return;
   }
