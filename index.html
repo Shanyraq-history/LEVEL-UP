@@ -7,17 +7,19 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="config.js"></script>
 <script>try{var t=localStorage.getItem("levelup-theme");if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Rubik:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<link rel="preload" href="fonts/juz40-regular.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/juz40-bold.woff2" as="font" type="font/woff2" crossorigin>
 <style>
+@font-face{font-family:"JUZ40";src:url("fonts/juz40-regular.woff2") format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"JUZ40";src:url("fonts/juz40-medium.woff2") format("woff2");font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:"JUZ40";src:url("fonts/juz40-bold.woff2") format("woff2");font-weight:600 700;font-style:normal;font-display:swap}
 /* Layout: robot-lab console. Silver shell + dark visor panels, cyan "eye" glow as the single accent. Sidebar nav, one working column. */
 :root{
   --bg:#EDF1F5; --surface:#FFFFFF; --surface-2:#E2E8EF; --ink:#13243A; --muted:#566880; --line:#CDD6E1;
   --visor:#0D2033; --visor-ink:#DDF7FC; --glow:#2CCFEA; --accent:#0A7A98; --on-accent:#FFFFFF;
   --ok:#17875A; --ok-bg:#DDF3E8; --warn:#A8650A; --warn-bg:#FBEBD2; --bad:#B83A33; --bad-bg:#F8E0DE;
   --dot:rgba(19,36,58,.07); --shadow:0 1px 2px rgba(19,36,58,.06),0 6px 20px rgba(19,36,58,.06);
-  --f-display:"Unbounded","Rubik",system-ui,sans-serif; --f-body:"Rubik",system-ui,-apple-system,"Segoe UI",sans-serif; --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  --f-display:"JUZ40",system-ui,sans-serif; --f-body:"JUZ40",system-ui,-apple-system,"Segoe UI",sans-serif; --f-mono:"JUZ40",system-ui,sans-serif;
   --r:14px;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
@@ -32,6 +34,7 @@
   --dot:rgba(63,221,244,.08); --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25); color-scheme:dark}
 
 *{box-sizing:border-box}
+button,input,textarea,select{font-family:var(--f-body)}
 [hidden]{display:none!important}
 html,body{background:var(--bg);color:var(--ink)}
 body{font-family:var(--f-body);font-size:15px;line-height:1.5;
@@ -91,6 +94,9 @@ main{min-width:0;display:flex;flex-direction:column;gap:20px}
 /* cards & forms */
 .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;box-shadow:var(--shadow);min-width:0}
 .composer{display:grid;gap:12px;border-style:dashed;box-shadow:none;background:transparent}
+.atts{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.atts .btn{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stutabs{max-width:320px;margin:0 0 12px}
 .composer .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
 label.f{display:flex;flex-direction:column;gap:5px;font-size:.82rem;font-weight:500;color:var(--muted)}
 .f input,.f textarea,.f select,input.t{padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);width:100%;font-size:.95rem}
@@ -221,6 +227,7 @@ tr.open td{background:color-mix(in srgb,var(--accent) 10%,var(--surface))}
 .msg.bot{background:var(--surface-2);align-self:flex-start;border-bottom-left-radius:4px}
 .msg.me{background:var(--accent);color:var(--on-accent);align-self:flex-end;border-bottom-right-radius:4px}
 .hform{display:flex;gap:8px;padding:10px;border-top:1px solid var(--line)}
+.msg.typing{opacity:.7;font-style:italic}
 .hform input{flex:1;min-width:0;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
 .reg{display:grid;grid-template-columns:auto minmax(0,1fr);gap:20px;align-items:center;background:var(--visor);color:var(--visor-ink);border-radius:var(--r);padding:20px}
 .reg svg{width:110px;height:126px}
@@ -292,31 +299,323 @@ img{max-width:100%}
 .hello .btn.primary{background:var(--glow);border-color:var(--glow);color:#06202B}
 @keyframes helloIn{from{opacity:0;transform:translateY(-10px) scale(.97)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.bot.wave .bot-arm-r{animation:none;transform:rotate(150deg)}}
+.runstat{display:flex;gap:6px;flex-wrap:wrap;position:sticky;top:calc(env(safe-area-inset-top,0px) + 70px);z-index:5;background:var(--surface);padding:8px 0}
+.qwrap{display:flex;flex-direction:column;gap:8px;padding:10px 0;border-top:1px solid var(--line)}
+.qwrap:first-of-type{border-top:0}
+.qwrap .q{border-top:0;padding:0}
+.qwrap > .btn{align-self:flex-start}
+.verdict{font-weight:600;margin:0}
+.verdict.ok{color:var(--ok)} .verdict.bad{color:var(--bad)}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 @media (max-width:420px){.row2{grid-template-columns:1fr}}
+
+/* ===== Study Studio theme (deep teal #17404E) ===== */
+:root{
+  --bg:#F6F8F5; --surface:#FFFEFB; --surface-2:#EDF4F0; --ink:#1D3940; --muted:#6C8382; --line:#E4ECE8;
+  --visor:#17404E; --visor-ink:#E9F5EF; --glow:#9ADCC6; --accent:#17404E; --on-accent:#FFFFFF; --prog:#4C9B86;
+  --ok:#2E816A; --ok-bg:#E1F2E8; --warn:#A4752B; --warn-bg:#FCF1DA; --bad:#B5483F; --bad-bg:#FBE6E2;
+  --halo:#DDECDF; --hero-a:#D3E7DF; --hero-b:#E2F0E6; --hero-c:#F3F1E3; --hero-line:#D6E8DF; --hero-ink:#17404E; --hero-sub:#54716E; --circle:#A9CEC1;
+  --nav-on:#E1EFE9; --nav-ink:#74888B; --soft:#A7B5B1; --t1:#E4F0E9; --t2:#DEF1E7; --t3:#FFF1DF;
+  --dot:transparent; --shadow:0 14px 42px rgba(23,64,78,.055); --r:20px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0B1C21; --surface:#112A31; --surface-2:#173740; --ink:#E3F0EC; --muted:#8FAAA6; --line:#1F434C;
+  --visor:#0E3440; --visor-ink:#E3F0EC; --glow:#7FD1B8; --accent:#7FD1B8; --on-accent:#0B1C21; --prog:#7FD1B8;
+  --ok:#6FD0A6; --ok-bg:#12372C; --warn:#E9BC6E; --warn-bg:#3A2E14; --bad:#F08A80; --bad-bg:#3E1D1B;
+  --halo:#123A3A; --hero-a:#14424A; --hero-b:#123A40; --hero-c:#1A3A33; --hero-line:#1F4D52; --hero-ink:#E9F5EF; --hero-sub:#A9C7C0; --circle:#2A6A66;
+  --nav-on:rgba(127,209,184,.14); --nav-ink:#93ABA7; --soft:#6F8C88; --t1:#173F45; --t2:#163E36; --t3:#3A3220;
+  --dot:transparent; --shadow:0 14px 42px rgba(0,0,0,.28); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0B1C21; --surface:#112A31; --surface-2:#173740; --ink:#E3F0EC; --muted:#8FAAA6; --line:#1F434C;
+  --visor:#0E3440; --visor-ink:#E3F0EC; --glow:#7FD1B8; --accent:#7FD1B8; --on-accent:#0B1C21; --prog:#7FD1B8;
+  --ok:#6FD0A6; --ok-bg:#12372C; --warn:#E9BC6E; --warn-bg:#3A2E14; --bad:#F08A80; --bad-bg:#3E1D1B;
+  --halo:#123A3A; --hero-a:#14424A; --hero-b:#123A40; --hero-c:#1A3A33; --hero-line:#1F4D52; --hero-ink:#E9F5EF; --hero-sub:#A9C7C0; --circle:#2A6A66;
+  --nav-on:rgba(127,209,184,.14); --nav-ink:#93ABA7; --soft:#6F8C88; --t1:#173F45; --t2:#163E36; --t3:#3A3220;
+  --dot:transparent; --shadow:0 14px 42px rgba(0,0,0,.28); color-scheme:dark}
+body{background:radial-gradient(circle at 82% 2%,var(--halo) 0%,transparent 25%),var(--bg);background-attachment:fixed;font-size:14.5px}
+body::before{background:var(--bg)}
+h1{font-weight:700;letter-spacing:-.02em}
+.eyebrow{letter-spacing:.14em;color:var(--soft);font-weight:600}
+
+/* layout: sidebar | main | rail */
+.layout{grid-template-columns:246px minmax(0,1fr) 286px;gap:24px;max-width:1630px;padding:23px 25px 60px;align-items:start}
+.layout.norail{grid-template-columns:246px minmax(0,1fr);max-width:1400px}
+.maincol{min-width:0;display:flex;flex-direction:column}
+.sidebar{background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow);border-radius:28px;position:sticky;top:23px;
+  height:calc(100vh - 46px);min-height:560px;padding:24px 14px 16px;display:flex;flex-direction:column;overflow-y:auto;scrollbar-width:thin}
+.sidebar > .brand{padding:0 10px;margin:0 0 30px}
+.brand b{font-size:1.15rem;font-weight:700;letter-spacing:-.02em}
+.brand small{letter-spacing:.2em;color:var(--soft);font-weight:600;font-size:.62rem;margin-top:2px}
+.brandMark svg{width:39px;height:39px;display:block}
+.spacer{flex:1;min-height:16px}
+.sidetip{background:linear-gradient(133deg,var(--hero-a),var(--hero-c));border-radius:18px;margin:0 3px 4px;padding:17px 15px}
+.sidetip b{display:block;font-size:.9rem;line-height:1.4;color:var(--hero-ink)}
+.sidetip p{font-size:.78rem;line-height:1.5;color:var(--hero-sub);margin:6px 0 11px}
+.sidetip a{display:inline-block;background:var(--surface);border:1px solid var(--line);border-radius:12px;color:var(--accent);padding:8px 12px;font-size:.78rem;font-weight:700;text-decoration:none}
+
+/* sidebar nav (light) */
+.side{background:none;border:0;border-radius:0;padding:0;max-height:none;overflow:visible;position:static;gap:3px;align-items:stretch;align-self:stretch}
+.side .navh{font-family:var(--f-body);font-size:.64rem;letter-spacing:.18em;text-transform:uppercase;font-weight:700;color:var(--soft);padding:14px 14px 8px}
+.side .navh:first-child{padding-top:0}
+.side a,.side .naddbtn{gap:12px;padding:11px 14px;border-radius:14px;color:var(--nav-ink);font-weight:500;font-size:.95rem}
+.side a:hover{background:var(--surface-2);color:var(--accent)}
+.side .naddbtn{color:var(--soft);font-size:.86rem}
+.side .naddbtn:hover{color:var(--accent)}
+.side .ni{width:19px;height:19px;stroke-width:1.9}
+.side a[aria-current="page"],.side a.subj-on{background:var(--nav-on);color:var(--accent);font-weight:700}
+.side a[aria-current="page"] .cnt{color:var(--accent)}
+.side .badge{min-width:22px;height:22px;padding:0 7px;background:var(--t1);color:var(--accent);box-shadow:none;font-size:.72rem;font-weight:700}
+.side .sub{margin:2px 0 8px 23px;padding-left:12px;border-left:1.5px solid var(--line)}
+.side .sub a{padding:7px 11px;font-size:.86rem;color:var(--nav-ink)}
+.side .sub a[aria-current="page"]{background:var(--surface-2);color:var(--ink);font-weight:600}
+.side .sub .cnt{color:var(--soft)}
+.side .nempty{color:var(--soft)}
+.side .addsub input{background:var(--surface);border-color:var(--line);color:var(--ink)}
+
+/* top bar */
+.top{position:static;background:transparent;border:0;padding:0!important;margin:2px 0 22px;min-height:50px;justify-content:flex-end;gap:10px}
+.top > .brand{display:none;margin-right:auto}
+.top .btn{height:42px;border-radius:13px;background:var(--surface);border:1px solid var(--line);color:var(--muted);padding:0 14px}
+.top .btn:hover{color:var(--accent);border-color:var(--accent)}
+.top .themebtn{width:42px;padding:0}
+.greet .gb{background:var(--visor);color:var(--visor-ink);box-shadow:0 8px 18px rgba(23,64,78,.18);border-radius:14px;border-top-right-radius:4px}
+.greet .gb small{color:color-mix(in srgb,var(--visor-ink) 70%,transparent)}
+
+/* surfaces */
+.card{border-radius:21px;padding:20px 22px}
+.composer{border-color:var(--line)}
+.btn{border-radius:12px;font-weight:600}
+.btn.primary{box-shadow:0 8px 18px rgba(23,64,78,.18)}
+.f input,.f textarea,.f select,input.t,.datectl input{border-radius:12px;background:var(--surface)}
+.bar{height:7px;background:var(--surface-2)}
+.bar i{background:var(--prog)}
+.tick{border-radius:8px;width:26px;height:26px}
+.tick:checked{background:var(--prog);border-color:var(--prog)}
+.tick:checked::after{width:7px;height:12px}
+.banner{background:var(--surface);color:var(--ink);border:1px solid var(--line);box-shadow:var(--shadow);border-radius:21px}
+.banner .big{color:var(--accent)}
+.banner .muted{color:var(--muted)}
+.banner .bar{background:var(--surface-2)}
+.banner .bar i{background:var(--prog)}
+.tablewrap{border-radius:21px;box-shadow:var(--shadow)}
+th{font-family:var(--f-body);font-weight:700;color:var(--soft)}
+.empty{border-radius:21px;background:var(--surface)}
+.tag{font-family:var(--f-body);font-weight:700;border-radius:8px;border:0;background:var(--t1);padding:3px 8px}
+.chip{font-weight:600}
+.pills a[aria-current="page"]{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.reg{border-radius:25px;background:linear-gradient(111deg,var(--visor),color-mix(in srgb,var(--visor) 80%,#2E816A))}
+.reg p{color:color-mix(in srgb,var(--visor-ink) 78%,transparent)}
+.reg .f{color:color-mix(in srgb,var(--visor-ink) 70%,transparent)}
+.reg .f input{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.2);color:#fff}
+.reg .btn.primary,.hello .btn.primary{background:var(--glow);border-color:var(--glow);color:#0B2A33}
+.authtabs{background:rgba(0,0,0,.2)}
+.authtabs button{color:color-mix(in srgb,var(--visor-ink) 70%,transparent)}
+.authtabs button.on{background:var(--glow);color:#0B2A33}
+.stutabs{background:var(--surface-2)}
+.stutabs button{color:var(--muted)}
+.stutabs button.on{background:var(--accent);color:var(--on-accent)}
+.toast{background:var(--visor);color:var(--visor-ink);border-radius:14px;box-shadow:0 15px 45px rgba(23,64,78,.25)}
+.runstat{top:0}
+
+/* home: hero, stats, subjects */
+.hero{min-height:200px;position:relative;overflow:hidden;display:flex;align-items:center;border-radius:25px;padding:27px 30px;
+  background:linear-gradient(111deg,var(--hero-a) 0%,var(--hero-b) 57%,var(--hero-c) 100%);border:1px solid var(--hero-line)}
+.hero-content{position:relative;z-index:2;max-width:60%}
+.eyebrow-pill{display:inline-flex;align-items:center;gap:7px;background:color-mix(in srgb,var(--surface) 70%,transparent);border-radius:999px;padding:6px 11px;color:var(--hero-ink);font-size:.7rem;font-weight:700;letter-spacing:.06em}
+.eyebrow-pill i{height:6px;width:6px;border-radius:50%;background:var(--prog)}
+.hero h2{font-weight:700;font-size:clamp(1.45rem,2.15vw,2.1rem);line-height:1.2;letter-spacing:-.02em;margin:14px 0 8px;color:var(--hero-ink)}
+.hero p{font-size:.86rem;color:var(--hero-sub);line-height:1.6;max-width:360px;margin:0 0 16px}
+.hero .btn.primary{background:var(--visor);border-color:var(--visor);color:#fff}
+.hero-art{position:absolute;right:23px;top:50%;transform:translateY(-50%);width:250px;height:200px}
+.hero-art .circle{position:absolute;right:30px;top:12px;height:176px;width:176px;border-radius:50%;background:var(--circle);
+  box-shadow:0 0 0 18px color-mix(in srgb,var(--surface) 16%,transparent),0 0 0 36px color-mix(in srgb,var(--surface) 9%,transparent);display:grid;place-items:center}
+.hero-art .circle svg{width:120px;height:138px}
+.float-tag{position:absolute;padding:9px 13px;background:var(--surface);border-radius:13px;box-shadow:0 9px 25px rgba(23,64,78,.14);font-size:.76rem;font-weight:700;color:var(--hero-ink);white-space:nowrap}
+.tag-one{top:20px;right:0;transform:rotate(9deg)}
+.tag-two{bottom:20px;left:0;transform:rotate(-8deg);color:var(--ok)}
+.sechead{display:flex;justify-content:space-between;align-items:center;margin:6px 0 -6px;gap:8px}
+.sechead h3{font-size:1.05rem;font-weight:700;letter-spacing:-.01em}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}
+.stat{background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow);border-radius:19px;min-height:116px;padding:17px;display:flex;flex-direction:column;justify-content:space-between;gap:10px;min-width:0}
+.stat .st{display:flex;align-items:center;justify-content:space-between;gap:6px;color:var(--muted);font-size:.76rem;font-weight:600}
+.stat .si{height:34px;width:34px;display:grid;place-items:center;border-radius:12px;flex:0 0 auto}
+.stat .si svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.si.c1{background:var(--warn-bg);color:var(--warn)} .si.c2{background:var(--t1);color:var(--accent)} .si.c3{background:var(--ok-bg);color:var(--ok)}
+.stat strong{font-size:1.7rem;letter-spacing:-.03em;font-weight:700;line-height:1}
+.stat strong span{font-size:.82rem;letter-spacing:0;font-weight:600;color:var(--muted)}
+.stat small{font-size:.72rem;color:var(--soft);font-weight:600}
+.subjects{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:13px}
+.scard{background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow);border-radius:19px;padding:17px;min-width:0;position:relative;overflow:hidden;
+  text-decoration:none;color:var(--ink);transition:transform .2s,box-shadow .2s;display:flex;flex-direction:column}
+.scard:hover{transform:translateY(-3px);box-shadow:0 15px 26px rgba(23,64,78,.12)}
+.scard .sic{height:44px;width:44px;display:grid;place-items:center;border-radius:14px;margin-bottom:14px;color:var(--accent);background:var(--t1)}
+.scard:nth-child(3n+2) .sic{background:var(--t2);color:var(--ok)} .scard:nth-child(3n) .sic{background:var(--t3);color:var(--warn)}
+.scard .sic .ni{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.scard b{font-size:.92rem;font-weight:700;margin-bottom:4px}
+.scard p{font-size:.76rem;color:var(--muted);margin:0 0 12px}
+.scard .bar{margin-top:auto;height:6px}
+.scard .pct{position:absolute;right:16px;top:20px;color:var(--soft);font-size:.72rem;font-weight:700}
+
+/* rail */
+.rail{display:flex;flex-direction:column;gap:17px;position:sticky;top:23px}
+.rbox{background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow);border-radius:21px;padding:20px}
+.rbox h3{font-size:.98rem;font-weight:700;margin-bottom:4px}
+.rbox .lbl{color:var(--muted);font-size:.78rem;margin-bottom:14px}
+.week{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
+.week .wl{font-size:.64rem;color:var(--soft);margin-bottom:6px;font-weight:600}
+.week button{height:34px;border:0;background:none;border-radius:11px;font-size:.8rem;font-weight:700;color:var(--ink);cursor:pointer;position:relative;padding:0}
+.week button:hover{background:var(--surface-2)}
+.week button.now{box-shadow:inset 0 0 0 1.5px var(--prog)}
+.week button.sel{background:var(--visor);color:#fff}
+.week button.done::after{content:"";position:absolute;left:50%;bottom:3px;width:4px;height:4px;margin-left:-2px;border-radius:50%;background:var(--prog)}
+.week button.sel.done::after{background:var(--glow)}
+.upc{margin-top:16px;border-top:1px solid var(--line);padding-top:14px;display:flex;align-items:center;gap:10px;min-width:0}
+.upc .ui{height:40px;width:40px;border-radius:12px;background:var(--warn-bg);display:grid;place-items:center;font-size:1.1rem;flex:0 0 auto}
+.upc b{display:block;font-size:.8rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.upc small{display:block;color:var(--muted);margin-top:3px;font-size:.74rem}
+.upc > div{min-width:0}
+.novacard{border-radius:22px;padding:18px;background:linear-gradient(138deg,var(--hero-a),var(--hero-c) 83%);border:1px solid var(--hero-line);position:relative;overflow:hidden}
+.novacard::after{content:"✦";position:absolute;top:11px;right:17px;color:var(--prog);font-size:22px;opacity:.7}
+.novacard .nic{height:46px;width:46px;border-radius:15px;background:var(--visor);display:grid;place-items:center;box-shadow:0 9px 17px rgba(23,64,78,.18)}
+.novacard .nic svg{width:34px;height:38px}
+.novacard h3{font-size:1rem;margin:12px 0 6px;color:var(--hero-ink)}
+.novacard p{font-size:.8rem;color:var(--hero-sub);line-height:1.6;margin:0 0 14px}
+.novacard .btn{background:var(--surface);border:0;color:var(--accent);box-shadow:0 4px 10px rgba(23,64,78,.08)}
+
+@media (min-width:821px){ .side > a,.side .sub a{width:100%} }
+.focus .fhead{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.focus .fhead h3{margin:0}
+.fpill{font-size:.66rem;color:var(--ok);background:var(--ok-bg);border-radius:30px;padding:5px 10px;font-weight:700}
+.fmain{display:flex;align-items:center;gap:15px;margin-top:14px}
+.ring{--p:0%;height:93px;width:93px;border-radius:50%;background:conic-gradient(var(--prog) 0 var(--p),var(--surface-2) var(--p) 100%);padding:9px;display:grid;place-items:center;flex:0 0 auto}
+.ring-in{width:100%;height:100%;background:var(--surface);border-radius:50%;display:grid;place-items:center}
+.ring strong{font-size:1.25rem;letter-spacing:-.02em;font-weight:700}
+.fcopy{min-width:0}
+.fcopy b{font-size:.84rem}
+.fcopy p{font-size:.74rem;color:var(--muted);line-height:1.5;margin:4px 0 10px}
+.fcopy .btn{background:var(--t1);border:0;color:var(--accent)}
+.fcopy .btn.running{background:var(--ok-bg);color:var(--ok)}
+.factions .btn.ghost{background:var(--surface-2);color:var(--muted);padding:0;width:34px;height:32px;flex:0 0 34px;border-radius:10px}
+.factions .btn.ghost:hover{background:var(--surface-2);color:var(--accent)}
+.factions .btn.ghost svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.factions{margin-top:12px;flex-wrap:nowrap;gap:4px}
+.factions #fBtn{flex:1 1 auto;background:var(--t1);border:0;color:var(--accent)}
+.factions #fBtn.running{background:var(--ok-bg);color:var(--ok)}
+.fpill.brk{background:var(--warn-bg);color:var(--warn)}
+.ring.brk{background:conic-gradient(var(--warn) 0 var(--p),var(--surface-2) var(--p) 100%)}
+.fset{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;margin-top:14px;border-top:1px solid var(--line);padding-top:12px}
+.fset .f input{padding:7px 9px}
+.mtitle{color:inherit;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+.mtitle:hover{color:var(--prog)}.mtitle:hover .arr{transform:translate(2px,-2px)}
+.mtitle .arr{font-size:.8em;color:var(--muted);transition:transform .15s}
+.mtitle .yt{display:inline-grid;place-items:center;width:28px;height:20px;border-radius:6px;background:#e62117;color:#fff;font-size:.62rem;flex:0 0 auto}
+.stat.ubt .cd{display:flex;align-items:flex-start;justify-content:space-between;gap:2px}
+.stat.ubt .cu{display:flex;flex-direction:column;align-items:center;min-width:0}
+.stat.ubt .cu b{font-size:1.45rem;font-weight:700;letter-spacing:-.02em;line-height:1;font-variant-numeric:tabular-nums}
+.stat.ubt .cu i{font-style:normal;font-size:.66rem;color:var(--soft);font-weight:600;margin-top:4px}
+.stat.ubt .cs{font-size:1.2rem;font-weight:700;color:var(--muted);line-height:1.1}
+.stat.ubt .cd-done{font-size:1rem}
+.stat.rank{font:inherit;color:inherit;text-align:left;cursor:pointer;transition:transform .15s,box-shadow .15s}
+.stat.rank:hover{transform:translateY(-2px);box-shadow:0 14px 26px rgba(23,64,78,.12)}
+.stat.rank.top1{background:linear-gradient(135deg,var(--surface),var(--warn-bg));border-color:color-mix(in srgb,var(--warn) 40%,var(--line))}
+.stat.rank.top1 .si{background:var(--warn-bg);color:var(--warn)}
+.rankbox .lb{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
+.lb li{display:grid;grid-template-columns:32px minmax(0,1fr) auto 48px;gap:10px;align-items:center;padding:8px 10px;border-radius:12px}
+.lb li:nth-child(odd){background:var(--surface-2)}
+.lb li.me{box-shadow:inset 0 0 0 1.5px var(--prog)}
+.lb li.gold .pl{background:var(--warn-bg);color:var(--warn)}
+.lb .pl{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;background:var(--t1);color:var(--accent);font-weight:700;font-size:.8rem}
+.lb .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.lb .nm em{font-style:normal;color:var(--muted);font-weight:400}
+.lb .gp{font-size:.78rem}
+.lb b{text-align:right}
+.si.fl svg{transform-origin:50% 90%}
+.si.fl-0{background:var(--surface-2);color:var(--soft)}
+.si.fl-1 svg{animation:flick 1.6s ease-in-out infinite}
+.si.fl-2{box-shadow:0 0 0 3px color-mix(in srgb,var(--warn) 18%,transparent)} .si.fl-2 svg{width:20px;height:20px;fill:color-mix(in srgb,#F2A33A 35%,transparent);animation:flick 1.2s ease-in-out infinite}
+.si.fl-3{background:linear-gradient(160deg,#FFE3B0,#FFC27A);color:#D2601A;box-shadow:0 0 14px rgba(242,140,40,.45)} .si.fl-3 svg{width:22px;height:22px;fill:rgba(255,170,60,.55);animation:flick .9s ease-in-out infinite}
+.si.fl-4{background:linear-gradient(160deg,#FFD08A,#FF8A3D);color:#B33A0E;box-shadow:0 0 22px rgba(255,120,40,.65);width:40px;height:40px} .si.fl-4 svg{width:25px;height:25px;fill:rgba(255,220,120,.7);animation:flick .7s ease-in-out infinite}
+@keyframes flick{0%,100%{transform:scale(1) rotate(-2deg)}50%{transform:scale(1.12) rotate(2deg)}}
+/* mobile bottom bar */
+.mbar{display:none}
+@media (max-width:1370px){ .layout{grid-template-columns:223px minmax(0,1fr) 264px;gap:16px;padding:18px 18px 60px} .layout.norail{grid-template-columns:223px minmax(0,1fr)} .sidebar{top:18px;height:calc(100vh - 36px)} }
+@media (max-width:1130px){
+  .layout,.layout.norail{grid-template-columns:210px minmax(0,1fr)}
+  .rail{grid-column:2;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));position:static;align-items:start}
+}
+@media (max-width:820px){
+  .layout,.layout.norail{grid-template-columns:minmax(0,1fr);display:flex;flex-direction:column;gap:14px;padding:14px max(14px,env(safe-area-inset-left,0px)) 100px}
+  .sidebar{position:static;height:auto;min-height:0;padding:6px;border-radius:16px;overflow:hidden;order:2;min-width:0;max-width:100%}
+  .top,#main,.rail{min-width:0;max-width:100%}
+  .top{flex-wrap:wrap}
+  .maincol{display:contents}
+  .top{order:1;margin:0}
+  #main{order:3}
+  .rail{order:4}
+  .sidebar > .brand,.sidebar .spacer,.sidetip{display:none}
+  .top > .brand{display:flex}
+  .side{flex-direction:row;overflow-x:auto}
+  .side a{padding:8px 12px}
+  .rail{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .hero{padding:22px}
+  .hero-content{max-width:66%}
+  .hero-art{transform:translateY(-50%) scale(.72);transform-origin:right center;right:-30px}
+  .mbar{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;align-items:center;justify-content:space-around;background:var(--surface);border-top:1px solid var(--line);
+    padding:8px 10px calc(8px + env(safe-area-inset-bottom,0px));box-shadow:0 -6px 25px rgba(23,64,78,.07)}
+  .mbar a,.mbar button{display:flex;flex-direction:column;align-items:center;gap:4px;border:0;background:none;color:var(--soft);font-size:.66rem;font-weight:700;padding:4px 10px;text-decoration:none;cursor:pointer}
+  .mbar .on{color:var(--accent)}
+  .mbar .ni{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .toast{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+}
+@media (max-width:560px){
+  .hero{min-height:190px;padding:20px 17px}
+  .hero-content{max-width:72%}
+  .hero p{font-size:.78rem}
+  .hero-art{transform:translateY(-50%) scale(.5);right:-70px}
+  .stats{gap:8px}
+  .stats:has(.ubt){grid-template-columns:repeat(2,minmax(0,1fr))}
+  .stat.ubt{grid-column:1/-1;order:-1;min-height:0}
+  .stat.ubt .cd{justify-content:space-around}
+  .stat{min-height:100px;padding:11px 10px}
+  .stat .si{height:28px;width:28px;border-radius:10px}
+  .stat strong{font-size:1.3rem}
+  .stat small{display:none}
+  .stat.rank small{display:block}
+  .rail{grid-template-columns:minmax(0,1fr)}
+  .subjects{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+}
+body.authmode .sidebar,body.authmode .rail,body.authmode #main,body.authmode .mbar{display:none!important}
+body.authmode .layout{grid-template-columns:minmax(0,1fr);max-width:900px}
+body.authmode .top > .brand{display:flex}
+body.authmode .authwrap{min-height:calc(100vh - 160px);padding:0}
 </style>
 </head>
 <body>
 
-<header class="top">
-  <a class="brand" href="#plan" aria-label="LEVEL UP: күндік жоспар">
-    <span id="brandMark"></span>
-    <span><b>LEVEL UP</b><small>IT · оқу платформасы</small></span>
-  </a>
-  <button id="previewBtn" class="btn sm" hidden>Оқушы көрінісі</button>
-  <button id="themeBtn" class="btn sm ghost themebtn" aria-label="Түнгі / күндізгі режим"></button>
-  <button id="logoutBtn" class="btn sm ghost" hidden>Шығу</button>
-  <button class="greet" id="greet" aria-label="NOVA көмекшісін ашу">
-    <span class="gb"><b id="gTitle">Сәлем! Мен — NOVA</b><small id="gSub">Іске қосылып жатырмын…</small></span>
-    <span id="gBot"></span>
-  </button>
-</header>
-
-<section class="authwrap" id="auth" hidden></section>
-<div class="layout">
-  <nav class="side" id="nav" aria-label="Бөлімдер мен пәндер"></nav>
-  <main id="main"></main>
+<div class="layout norail" id="layout">
+  <aside class="sidebar" aria-label="Мәзір">
+    <a class="brand" href="#plan" aria-label="LEVEL UP: басты бет"><span class="brandMark"></span><span><b>LEVEL UP</b><small>Study studio</small></span></a>
+    <nav class="side" id="nav" aria-label="Бөлімдер мен пәндер"></nav>
+    <div class="spacer"></div>
+    <div class="sidetip"><b>Кішкентай қадам — үлкен нәтижеге апарады!</b><p>Бүгін бір тапсырма орындап, мақсатыңа жақындай түс.</p><a href="#plan">Бүгінгі жоспар →</a></div>
+  </aside>
+  <div class="maincol">
+    <header class="top">
+      <a class="brand" href="#plan" aria-label="LEVEL UP: басты бет"><span class="brandMark"></span><span><b>LEVEL UP</b><small>Study studio</small></span></a>
+      <button id="previewBtn" class="btn sm" hidden>Оқушы көрінісі</button>
+      <button id="themeBtn" class="btn sm ghost themebtn" aria-label="Түнгі / күндізгі режим"></button>
+      <button id="logoutBtn" class="btn sm ghost" hidden>Шығу</button>
+      <button class="greet" id="greet" aria-label="NOVA көмекшісін ашу">
+        <span class="gb"><b id="gTitle">Сәлем! Мен — NOVA</b><small id="gSub">Іске қосылып жатырмын…</small></span>
+        <span id="gBot"></span>
+      </button>
+    </header>
+    <section class="authwrap" id="auth" hidden></section>
+    <main id="main"></main>
+  </div>
+  <aside class="rail" id="rail" hidden aria-label="Апта және NOVA"></aside>
 </div>
+<nav class="mbar" id="mbar" aria-label="Мобильді навигация"></nav>
 
 <aside class="hpanel" id="hpanel" hidden aria-label="NOVA көмекшісі">
   <header><span id="hpBot"></span><span><b>NOVA</b><small>LEVEL UP көмекшісі</small></span><button id="hpClose" aria-label="Жабу">×</button></header>
@@ -340,11 +639,18 @@ function fmtDate(s){ const d = parseD(s); return `${d.getDate()} ${MONTHS[d.getM
 function fmtTime(ms){ const d = new Date(ms); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; }
 function fmtDT(ms){ const d = new Date(ms); return `${d.getDate()} ${MONTHS[d.getMonth()]}, ${fmtTime(ms)}`; }
 function endOf(s){ const d = parseD(s); d.setHours(23,59,59,999); return d.getTime(); }
+function dueOf(t){ return t && t.deadline ? t.deadline : endOf(t.date); }
+function dueText(t){ const d = dueOf(t); return ymd(new Date(d)) === t.date ? fmtTime(d) : fmtDT(d); }
+function attHtml(t){
+  const a = t.attachments || []; if (!a.length) return '';
+  return `<div class="atts">${a.map(x => x.url ? `<a class="btn sm" href="${esc(x.url)}" target="_blank" rel="noopener">🔗 ${esc(x.name || x.url.replace(/^https?:\/\//, '').slice(0, 40))}</a>` : `<a class="btn sm" href="${esc(fileUrl('materials', x.path))}" target="_blank" rel="noopener">📄 ${esc(x.name || 'файл')}</a>`).join('')}</div>`;
+}
+const safeUrl = u => { u = u.trim(); if (!u) return ''; if (!/^https?:\/\//i.test(u)) u = 'https://' + u; try { return new URL(u).href; } catch { return ''; } };
 function shiftDate(s, n){ const d = parseD(s); d.setDate(d.getDate()+n); return ymd(d); }
 const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
 const firstName = n => String(n || '').trim().split(/\s+/)[0] || '';
 function deepMerge(t, p){ for (const k in p){ const v = p[k]; if (v && typeof v === 'object' && !Array.isArray(v)){ if (!t[k] || typeof t[k] !== 'object' || Array.isArray(t[k])) t[k] = {}; deepMerge(t[k], v); } else t[k] = v; } return t; }
-let toastT; function toast(msg){ const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 3200); }
+let toastT; function toast(msg, ms){ const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, ms || Math.max(3200, String(msg).length * 70)); }
 
 /* ---------- robot mascot (original drawing) ---------- */
 function bot(cls = ''){
@@ -360,7 +666,7 @@ function bot(cls = ''){
     <rect x="84" y="96" width="32" height="18" rx="6" fill="#C2CDD9"/>
     <path d="M100 108C141 108 153 140 151 166C148 199 127 213 100 213C73 213 52 199 49 166C47 140 59 108 100 108Z" fill="url(#bShell)" stroke="#A9B7C7" stroke-width="1.5"/>
     <path d="M53 170L82 174L85 181H115L118 174L147 170" fill="none" stroke="#A9B7C7" stroke-width="2" stroke-linejoin="round"/>
-    <text x="100" y="152" text-anchor="middle" font-family="Unbounded,Rubik,sans-serif" font-weight="700" font-size="15" letter-spacing="1" fill="#2CC3DE">NOVA</text>
+    <text x="100" y="152" text-anchor="middle" font-family="JUZ40,sans-serif" font-weight="700" font-size="15" letter-spacing="1" fill="#2CC3DE">NOVA</text>
     <ellipse cx="76" cy="134" rx="8" ry="15" fill="#FFFFFF" opacity=".75" transform="rotate(28 76 134)"/>
     <rect x="28" y="44" width="18" height="36" rx="9" fill="#D3DCE6" stroke="#A9B7C7" stroke-width="1.5"/>
     <rect x="154" y="44" width="18" height="36" rx="9" fill="#D3DCE6" stroke="#A9B7C7" stroke-width="1.5"/>
@@ -403,7 +709,7 @@ const secDef = k => k === 'check' ? 'checklists' : 'tests';
 function saveSecs(list, msg){ return cur(() => q(sb.from('subjects').update({ sections: list.map(({ id, name, kind }) => ({ id, name, kind })) }).eq('id', S.subject)), msg); }
 const TIPS = {
   student: {
-    plan:'Бүгінгі тапсырмаларды кеш соңына дейін (23:59) орында. Орындаған соң шаршыға белгі қой да, «Дәлел жүктеу» батырмасымен скриншот, фото немесе файл сал. Куратор оны бірден көреді.',
+    plan:'Бүгінгі тапсырмаларды дедлайнға дейін орында. Орындаған соң шаршыға белгі қой да, «Дәлел жүктеу» батырмасымен скриншот, фото немесе файл сал. Куратор оны бірден көреді.',
     analysis:'Нұсқа талдауды оқып, шешімді өз бетіңше қайталап шық. Қатені түсіну — деңгейді көтерудің ең жылдам жолы.',
     checklists:'Әр пунктті орындаған сайын белгі қой. Прогресс автоматты түрде сақталады.',
     books:'Кітапты ашып оқы. Жоспарда кітапқа сілтеме болса, сол тарауды оқып шық.',
@@ -446,6 +752,22 @@ const LOGIN_RE = /^[a-z0-9._-]{3,32}$/;
 const loginEmail = l => `${l}@${EMAIL_DOMAIN}`;
 const safeName = n => String(n || 'file').replace(/[^A-Za-z0-9._-]+/g, '_').slice(-80);
 const msOf = t => t ? new Date(t).getTime() : 0;
+const MAX_UP = 50 * 1024 * 1024;
+const mb = n => (n / 1048576).toFixed(1).replace('.0', '') + ' МБ';
+async function upMat(path, fi, btn){
+  if (fi.size > MAX_UP) throw new Error(`«${fi.name}» тым үлкен (${mb(fi.size)}). Шек — 50 МБ. Кітапты сығып (ilovepdf.com → Compress) қайта жүктеңіз немесе Google Drive сілтемесін «Сілтеме» жолына қойыңыз.`);
+  const old = btn && btn.textContent; if (btn) btn.textContent = `Жүктелуде… ${mb(fi.size)}`;
+  try {
+    const up = await sb.storage.from('materials').upload(path, fi, { contentType: fi.type || undefined });
+    if (up.error){
+      const m = String(up.error.message || up.error.error || up.error);
+      if (/size|large|413/i.test(m)) throw new Error(`«${fi.name}» тым үлкен (${mb(fi.size)}). Supabase шегі — 50 МБ.`);
+      if (/security|policy|unauthor|403/i.test(m)) throw new Error('Файл жүктеуге рұқсат жоқ: тек куратор жүктей алады (storage саясатын тексеру керек).');
+      throw new Error('Файл жүктелмеді: ' + m);
+    }
+    return { path, name:fi.name };
+  } finally { if (btn) btn.textContent = old; }
+}
 async function q(p){ const { data, error } = await p; if (error) throw error; return data; }
 S.urls = {}; S.urlsAt = Date.now(); S.authMode = 'login';
 
@@ -473,6 +795,7 @@ async function cur(fn, okMsg){
 }
 async function dbDelete(col, id){
   const table = col === 'drafts' ? 'tasks' : col;
+  if (table === 'tasks'){ const t = [...S.tasks, ...S.drafts].find(x => x.id === id); const ps = ((t && t.attachments) || []).filter(a => a.path).map(a => a.path); if (ps.length){ try { await sb.storage.from('materials').remove(ps); } catch {} } }
   if (table === 'materials' || table === 'checklists'){ const m = (table === 'materials' ? S.materials : S.checklists).find(x => x.id === id); if (m && m.file){ try { await sb.storage.from('materials').remove([m.file.path]); } catch {} } }
   return q(sb.from(table).delete().eq('id', id));
 }
@@ -482,7 +805,7 @@ async function loadAll(){
   if (Date.now() - S.urlsAt > 3 * 3600e3){ S.urls = {}; S.urlsAt = Date.now(); }
   const [subs, tasks, mats, cls, tests] = await Promise.all(['subjects','tasks','materials','checklists','tests'].map(t => q(sb.from(t).select('*'))));
   S.subjects = subs.map(x => ({ id:x.id, name:x.name, order:x.ord, sections: Array.isArray(x.sections) ? x.sections : null, createdAt:msOf(x.created_at) }));
-  const tk = tasks.map(t => ({ id:t.id, title:t.title, desc:t.descr, subject:t.subject || '', section:t.section, date:t.date, published:t.published, publishedAt:msOf(t.published_at), createdAt:msOf(t.created_at) }));
+  const tk = tasks.map(t => ({ id:t.id, title:t.title, desc:t.descr, subject:t.subject || '', section:t.section, date:t.date, published:t.published, publishedAt:msOf(t.published_at), deadline:msOf(t.deadline), attachments:Array.isArray(t.attachments) ? t.attachments : [], createdAt:msOf(t.created_at) }));
   S.tasks = tk.filter(t => t.published); S.drafts = tk.filter(t => !t.published);
   S.materials = mats.map(m => ({ id:m.id, subject:m.subject, section:m.section, title:m.title, desc:m.descr, link:m.link, file: m.file_path ? { path:m.file_path, name:m.file_name } : null, createdAt:msOf(m.created_at) }));
   S.checklists = cls.map(c => ({ id:c.id, subject:c.subject, section:c.section || '', title:c.title, items:c.items || [], file: c.file_path ? { path:c.file_path, name:c.file_name } : null, createdAt:msOf(c.created_at) }));
@@ -496,7 +819,13 @@ async function loadAll(){
     if (!pendingWrites) S.my = (rows[0] && rows[0].data) || { tasks:{}, checks:{}, tests:{} };
   }
   await signUrls();
+  await loadRating();
   renderData(); renderGreet();
+}
+async function loadRating(){
+  S.ratingDay = today();
+  try { const { data, error } = await sb.rpc('daily_rating', { d: S.ratingDay }); if (error) throw error; S.rating = data || []; S.ratingOk = true; }
+  catch (e){ console.warn('daily_rating', e); S.rating = []; S.ratingOk = false; }
 }
 async function signUrls(){
   const need = { proofs:new Set(), materials:new Set() };
@@ -504,6 +833,7 @@ async function signUrls(){
   if (S.role === 'curator') Object.values(S.progress).forEach(addP);
   addP(S.my);
   [...S.materials, ...S.checklists].forEach(m => { if (m.file && !S.urls['m:' + m.file.path]) need.materials.add(m.file.path); });
+  [...S.tasks, ...S.drafts].forEach(t => (t.attachments || []).forEach(a => { if (a.path && !S.urls['m:' + a.path]) need.materials.add(a.path); }));
   for (const bk of ['proofs', 'materials']){
     const paths = [...need[bk]]; if (!paths.length) continue;
     try {
@@ -517,7 +847,7 @@ function fileUrl(bucket, path){ return (path && S.urls[(bucket === 'materials' ?
 /* ---------- auth ---------- */
 function setAuthView(on){
   $('#auth').hidden = !on;
-  $('.layout').hidden = on;
+  document.body.classList.toggle('authmode', on);
   $('#greet').hidden = on;
   $('#logoutBtn').hidden = on;
   if (on){ $('#previewBtn').hidden = true; $('#hpanel').hidden = true; }
@@ -576,7 +906,7 @@ async function startSession(session){
 /* ---------- boot ---------- */
 async function boot(){
   $('#gBot').innerHTML = bot(); $('#hpBot').innerHTML = bot();
-  $('#brandMark').innerHTML = `<svg viewBox="0 0 40 40" width="34" height="34" aria-hidden="true"><rect x="2" y="6" width="36" height="28" rx="11" style="fill:var(--visor)"/><path d="M11 20a4 4 0 0 1 8 0z M21 20a4 4 0 0 1 8 0z" style="fill:var(--glow)"/><path d="M16 25h8a4 4 0 0 1-8 0z" style="fill:var(--glow)"/></svg>`;
+  document.querySelectorAll('.brandMark').forEach(el => el.innerHTML = `<svg viewBox="0 0 40 40" aria-hidden="true"><rect width="40" height="40" rx="13" style="fill:var(--visor)"/><rect x="7" y="11" width="26" height="19" rx="8" fill="#0B2A33"/><path d="M12 20a3.2 3.2 0 0 1 6.4 0z M21.6 20a3.2 3.2 0 0 1 6.4 0z" fill="#9ADCC6"/><path d="M17 24h6a3 3 0 0 1-6 0z" fill="#9ADCC6"/></svg>`);
   route();
   if (!sb){ S.role = 'anon'; setAuthView(true); renderAuth(); return; }
   const { data } = await sb.auth.getSession();
@@ -614,6 +944,7 @@ function route(){
   const m = /^s-([a-z0-9]+)-([a-z0-9]+)$/.exec(h);
   if (m){ S.view = 'subject'; S.subject = m[1]; S.tab = m[2]; }
   else if (h === 'students'){ S.view = 'students'; }
+  else if (h === 'mistakes'){ S.view = 'mistakes'; }
   else { S.view = 'plan'; }
   S.testOpen = null;
 }
@@ -634,6 +965,13 @@ const ICONS = {
   book:'<path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM4 21V5M8 7h7"/>',
   users:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M21.5 20a6.5 6.5 0 0 0-4-6"/>',
   plus:'<path d="M12 5v14M5 12h14"/>',
+  flame:'<path d="M12 22a7 7 0 0 0 7-7c0-3.5-2.5-6-4-7-1 3-4-1-4-5-4 3-6 7-6 12a7 7 0 0 0 7 7Z"/>',
+  check:'<path d="m4 12 5 5L20 6"/>',
+  trophy:'<path d="M7 3h10v7a5 5 0 0 1-10 0V3ZM7 5H4v3a4 4 0 0 0 4 4M17 5h3v3a4 4 0 0 1-4 4M12 15v4M8 21h8"/>',
+  chart:'<path d="M3 3v18h18M7 17v-6M12 17V7M17 17V4"/>',
+  bot:'<rect x="3" y="7" width="18" height="14" rx="5"/><path d="M12 3v4M9 3h6M8 13h.01M16 13h.01M9 17c1.5 1.3 4.5 1.3 6 0"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  redo:'<path d="M4 12a8 8 0 1 0 2.3-5.6M4 4v4.5h4.5"/><path d="M9.5 12.5l2 2 3.5-4"/>',
 };
 const ico = k => `<svg class="ni" viewBox="0 0 24 24" aria-hidden="true">${ICONS[k] || ICONS.book}</svg>`;
 function renderNav(){
@@ -641,6 +979,7 @@ function renderNav(){
   const left = r === 'curator' ? t.length : t.filter(x => !m.tasks?.[x.id]?.done).length;
   const badge = n => n ? `<span class="badge num">${n}</span>` : '';
   let h = `<p class="navh">Шолу</p><a href="#plan" ${S.view==='plan' ? 'aria-current="page"' : ''}>${ico('home')}<span class="nl">Басты бет</span>${badge(left)}</a>`;
+  if (r !== 'curator') h += `<a href="#mistakes" ${S.view==='mistakes' ? 'aria-current="page"' : ''}>${ico('redo')}<span class="nl">Қатемен жұмыс</span>${badge(Object.keys(MY().mistakes || {}).length)}</a>`;
   h += `<p class="navh">Пәндер</p>`;
   const subs = subjects();
   subs.forEach(s => {
@@ -656,6 +995,11 @@ function renderNav(){
     h += `<p class="navh">Басқару</p><a href="#students" ${S.view==='students' ? 'aria-current="page"' : ''}>${ico('users')}<span class="nl">Оқушылар</span>${badge(Object.keys(S.students).length)}</a>`;
   }
   $('#nav').innerHTML = h;
+  const fs = subs[0], mb = $('#mbar');
+  if (mb) mb.innerHTML = `<a href="#plan" class="${S.view==='plan'?'on':''}">${ico('home')}Басты бет</a>`
+    + (fs ? `<a href="#s-${esc(fs.id)}-${esc((secs(fs.id)[0] || {}).id || 'analysis')}" class="${S.view==='subject'?'on':''}">${ico('book')}Пәндер</a>` : '')
+    + (r === 'curator' ? `<a href="#students" class="${S.view==='students'?'on':''}">${ico('users')}Оқушылар</a>` : `<a href="#mistakes" class="${S.view==='mistakes'?'on':''}">${ico('redo')}Қателер</a>`)
+    + `<button type="button" data-act="open-nova">${ico('bot')}NOVA</button>`;
   if (S.addingSubject){ const i = $('#subjName'); if (i) i.focus(); }
 }
 
@@ -681,7 +1025,8 @@ function renderShell(){
   }
 
   if (v === 'plan'){
-    html += `<section class="vhead"><div><p class="eyebrow">Күндік жоспар</p><h1 id="planTitle">${esc(fmtDate(S.date))}</h1><p class="lead">Куратор жариялаған тапсырмаларды кеш соңына (23:59) дейін орындап, белгі қойып, дәлел жүкте.</p></div>
+    html += `<section class="hero" id="hero"></section><div class="stats" id="stats"></div>`;
+    html += `<section class="vhead"><div><p class="eyebrow">Күндік жоспар</p><h1 id="planTitle">${esc(fmtDate(S.date))}</h1><p class="lead">Куратор жариялаған тапсырмаларды дедлайнға дейін орындап, белгі қойып, дәлел жүкте.</p></div>
       <div class="datectl"><button class="btn sm" data-act="day" data-d="-1" aria-label="Алдыңғы күн">‹</button><input type="date" id="planDate" value="${S.date}" aria-label="Күнді таңдау"><button class="btn sm" data-act="day" data-d="1" aria-label="Келесі күн">›</button><button class="btn sm ghost" data-act="today">Бүгін</button></div></section>`;
     if (r === 'curator'){
       html += `<form class="card composer" id="taskForm">
@@ -690,6 +1035,10 @@ function renderShell(){
         <label class="f">Түсіндірме (міндетті емес)<textarea id="tDesc" maxlength="1200" placeholder="Не істеу керек, қандай дәлел жүктеу керек"></textarea></label>
         <div class="row"><label class="f">Пән<select id="tSubj"><option value="">Таңдалмаған</option>${subjects().map(s=>`<option value="${esc(s.id)}">${esc(s.name)}</option>`).join('')}</select></label>
         <label class="f">Бөлім<select id="tSec"><option value="">Таңдалмаған</option></select></label></div>
+        <div class="row"><label class="f">Дедлайн күні<input type="date" id="tDlDate" value="${S.date}"></label>
+        <label class="f">Дедлайн уақыты<input type="time" id="tDlTime" value="23:59"></label></div>
+        <label class="f">Сілтемелер (міндетті емес, әр жолға біреу)<textarea id="tLinks" rows="2" maxlength="2000" placeholder="https://..."></textarea></label>
+        <div class="actions"><label class="btn upload">PDF / файл тіркеу<input type="file" id="tFiles" multiple accept=".pdf,application/pdf,image/*,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip,.txt,.py"></label><span id="tFilesName" class="muted" style="font-size:.85rem"></span></div>
         <div class="actions"><button class="btn primary" type="submit" data-mode="publish">Жариялау</button><button class="btn" type="submit" data-mode="draft">Жоба ретінде сақтау</button><span class="muted" style="font-size:.82rem">Жарияланған тапсырманы барлық оқушы бірден көреді.</span></div>
       </form><div id="draftList" class="list"></div>`;
     } else html += `<div id="deadline"></div>`;
@@ -710,7 +1059,7 @@ function renderShell(){
       if (r === 'curator') html += `<form class="card composer" id="matForm">
         <h2>${esc(tb.name)}: жаңа материал</h2>
         <div class="row"><label class="f">Атауы<input id="mTitle" required maxlength="140" placeholder="${esc(tb.ph || '')}"></label>
-        <label class="f">Сілтеме (міндетті емес)<input id="mLink" type="url" placeholder="https://"></label></div>
+        <label class="f">Сілтеме (міндетті емес)<input id="mLink" type="url" placeholder="${S.tab === 'analysis' ? 'YouTube сілтемесі: https://youtu.be/…' : 'https://'}"></label></div>
         <label class="f">Сипаттама<textarea id="mDesc" maxlength="4000"></textarea></label>
         <div class="actions"><label class="btn upload">PDF / файл тіркеу<input type="file" id="mFile" accept=".pdf,application/pdf,image/*,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip,.txt"></label><span id="mFileName" class="muted" style="font-size:.85rem"></span><button class="btn primary" type="submit" style="margin-left:auto">Қосу</button></div>
       </form>`;
@@ -730,9 +1079,12 @@ function renderShell(){
         <div class="actions"><button class="btn" type="button" data-act="add-q">+ Сұрақ қосу</button><button class="btn primary" type="submit" style="margin-left:auto">Тестті жариялау</button></div></form>`;
       html += `<div id="testList" class="list"></div>`;
     }
+  } else if (v === 'mistakes'){
+    html += `<section class="vhead"><div><p class="eyebrow">Шолу</p><h1>Қатемен жұмыс</h1><p class="lead">Барлық тесттерде қате жауап берген сұрақтарың осында жиналады. Қайта өтіп, дұрыс жауап берсең, сұрақ тізімнен өзі шығады.</p></div></section><div id="mistBox"></div>`;
   } else if (v === 'students'){
-    html += `<section class="vhead"><div><p class="eyebrow">Оқушылар</p><h1>Оқушылар</h1><p class="lead">Әр оқушының тапсырмалары, дәлелдері, чек-лист пен тест нәтижелері.</p></div></section>
-      <div class="datectl"><span class="muted">Күн:</span><button class="btn sm" data-act="day" data-d="-1">‹</button><input type="date" id="planDate" value="${S.date}"><button class="btn sm" data-act="day" data-d="1">›</button><button class="btn sm ghost" data-act="today">Бүгін</button></div><div id="stuList"></div><div id="stuDetail"></div>`;
+    html += `<section class="vhead"><div><p class="eyebrow">Оқушылар</p><h1>Оқушылар</h1><p class="lead">«Күндік» — таңдалған күннің тапсырмалары мен дәлелдері. «Жалпы» — барлық күндер бойынша пайыздар.</p></div></section>
+      <div class="authtabs stutabs" role="tablist"><button type="button" data-act="stu-tab" data-v="day" class="${S.stuTab === 'all' ? '' : 'on'}">Күндік</button><button type="button" data-act="stu-tab" data-v="all" class="${S.stuTab === 'all' ? 'on' : ''}">Жалпы</button></div>
+      <div class="datectl" id="stuDate" ${S.stuTab === 'all' ? 'hidden' : ''}><span class="muted">Күн:</span><button class="btn sm" data-act="day" data-d="-1">‹</button><input type="date" id="planDate" value="${S.date}"><button class="btn sm" data-act="day" data-d="1">›</button><button class="btn sm ghost" data-act="today">Бүгін</button></div><div id="stuList"></div><div id="stuDetail"></div>`;
   }
   $('#main').innerHTML = html;
   if (v === 'subject' && curSec() && curSec().kind === 'test' && r === 'curator') addQ();
@@ -748,10 +1100,10 @@ function proofHtml(p, removable, tid){
 }
 function statusChip(tp, task){
   if (tp && tp.done){
-    const late = tp.doneAt && tp.doneAt > endOf(task.date);
+    const late = tp.doneAt && tp.doneAt > dueOf(task);
     return late ? `<span class="chip warn">Кешігіп орындалды · ${fmtTime(tp.doneAt)}</span>` : `<span class="chip ok">Орындалды${tp.doneAt ? ' · ' + fmtTime(tp.doneAt) : ''}</span>`;
   }
-  if (Date.now() > endOf(task.date)) return `<span class="chip bad">Орындалмады</span>`;
+  if (Date.now() > dueOf(task)) return `<span class="chip bad">Орындалмады</span>`;
   return `<span class="chip">Күтілуде</span>`;
 }
 function taskTags(t){
@@ -767,7 +1119,8 @@ function renderData(){
   renderNav();
   if (needsReg()) return;
   const r = ROLE(), v = S.view;
-  if (v === 'plan') r === 'curator' ? renderPlanCurator() : renderPlanStudent();
+  renderRail();
+  if (v === 'plan'){ r === 'curator' ? renderPlanCurator() : renderPlanStudent(); renderHome(); }
   else if (v === 'subject'){
     const st = $('#subjTitle'); if (st) st.textContent = subjName(S.subject) || (S.subjects.length ? 'Пән табылмады' : '…');
     const cs = curSec();
@@ -779,6 +1132,7 @@ function renderData(){
     else renderTests();
   }
   else if (v === 'students') renderStudents();
+  else if (v === 'mistakes') renderMistakes();
 }
 
 function renderPlanStudent(){
@@ -789,7 +1143,7 @@ function renderPlanStudent(){
   if (dl){
     if (tasks.length){
       dl.innerHTML = `<div class="banner"><div class="big num">${done}/${tasks.length}</div><div class="grow"><b>${done === tasks.length ? 'Барлығы орындалды. Жарайсың!' : 'тапсырма орындалды'}</b><span class="muted" id="countdown">${countdownText()}</span><div class="bar" style="margin-top:6px"><i style="width:${pct(done,tasks.length)}%"></i></div></div></div>`;
-      if (S.date > today()) $('#countdown').textContent = 'Бұл күннің тапсырмалары алдын ала жарияланған.';
+      if (S.date > today() && !$('#countdown').textContent) $('#countdown').textContent = 'Бұл күннің тапсырмалары алдын ала жарияланған.';
     } else dl.innerHTML = '';
   }
   if (!tasks.length){ list.innerHTML = emptyBox(S.role === 'guest' || S.role === 'loading' ? 'Тапсырмалар кіргеннен кейін осында шығады.' : 'Куратор бұл күнге әлі тапсырма жарияламады. Кейінірек қайта кір.'); return; }
@@ -801,8 +1155,8 @@ function renderPlanStudent(){
       <input type="checkbox" class="tick" data-act="tick" data-t="${esc(t.id)}" ${tp.done ? 'checked' : ''} aria-label="Орындалды деп белгілеу">
       <div class="tbody">
         <div class="thead"><h3>${esc(t.title)}</h3>${statusChip(tp, t)}</div>
-        ${t.desc ? `<p class="tdesc">${esc(t.desc)}</p>` : ''}
-        <div class="meta">${taskTags(t)}<span>Мерзімі: ${esc(fmtDate(t.date))}, 23:59</span></div>
+        ${t.desc ? `<p class="tdesc">${esc(t.desc)}</p>` : ''}${attHtml(t)}
+        <div class="meta">${taskTags(t)}<span>Дедлайн: ${esc(dueText(t))}</span></div>
         <div class="proofs">${proofs.map(p => proofHtml(p, !RO(), t.id)).join('')}
           <label class="btn sm upload">${up ? 'Жүктелуде…' : (proofs.length ? '+ Тағы дәлел' : 'Дәлел жүктеу')}<input type="file" data-act="proof" data-t="${esc(t.id)}" accept="image/*,application/pdf,.doc,.docx,.ppt,.pptx,.zip,.py,.txt" ${up ? 'disabled' : ''}></label>
           ${tp.done && !proofs.length ? '<span class="chip warn">Дәлел әлі жүктелмеді</span>' : ''}
@@ -811,23 +1165,46 @@ function renderPlanStudent(){
   }).join('');
 }
 function countdownText(){
-  if (S.date !== today()) return S.date < today() ? 'Бұл күннің мерзімі өтіп кетті.' : '';
-  const ms = endOf(S.date) - Date.now();
+  const m = MY(), now = Date.now();
+  const left = pubTasks(S.date).filter(t => !m.tasks?.[t.id]?.done && dueOf(t) > now).sort((a, b) => dueOf(a) - dueOf(b));
+  if (!left.length) return S.date < today() ? 'Бұл күннің мерзімі өтіп кетті.' : '';
+  const t = left[0], ms = dueOf(t) - now;
   const h = Math.floor(ms / 3600000), mi = Math.floor(ms % 3600000 / 60000);
-  return `Кеш соңына дейін (23:59) ${h} сағ ${mi} мин қалды`;
+  return `Жақын дедлайн (${dueText(t)}): ${h} сағ ${mi} мин қалды`;
 }
-setInterval(() => { const c = $('#countdown'); if (c && S.date === today()) c.textContent = countdownText(); }, 30000);
+const UBT_AT = new Date('2027-01-11T08:00:00+05:00');
+function ubtParts(){
+  const now = new Date(), end = UBT_AT;
+  if (now >= end) return null;
+  let mo = 0;
+  const addM = (d, m) => { const x = new Date(d); x.setMonth(x.getMonth() + m); return x; };
+  while (addM(now, mo + 1) <= end) mo++;
+  let ms = end - addM(now, mo);
+  const dd = Math.floor(ms / 864e5); ms -= dd * 864e5;
+  const hh = Math.floor(ms / 36e5); ms -= hh * 36e5;
+  const mm = Math.floor(ms / 6e4);
+  return [mo, dd, hh, mm];
+}
+function ubtHtml(){
+  const p = ubtParts();
+  if (!p) return '<b class="cd-done">ҰБТ басталды! Сәттілік! 🍀</b>';
+  const L = ['Ай', 'Күн', 'Сағат', 'минут'];
+  return p.map((v, i) => `<div class="cu"><b>${String(v).padStart(2, '0')}</b><i>${L[i]}</i></div>`).join('<span class="cs">:</span>');
+}
+setInterval(() => { const c = $('#ubtCd'); if (c && !document.hidden) c.innerHTML = ubtHtml(); }, 1000);
+setInterval(() => { const c = $('#countdown'); if (c && S.date <= today()) c.textContent = countdownText(); }, 30000);
 
 function renderPlanCurator(){
   const fd = $('#formDate'); if (fd) fd.textContent = fmtDate(S.date);
+  const ddl = $('#tDlDate'); if (ddl && ddl.dataset.d !== S.date){ ddl.value = S.date; ddl.dataset.d = S.date; }
   const sel = $('#tSubj');
   if (sel && sel.options.length - 1 !== S.subjects.length){ const v = sel.value; sel.innerHTML = `<option value="">Таңдалмаған</option>${subjects().map(s=>`<option value="${esc(s.id)}">${esc(s.name)}</option>`).join('')}`; sel.value = v; }
   const dl = $('#draftList');
   const drafts = S.drafts.filter(d => d.date === S.date);
   if (dl) dl.innerHTML = drafts.length ? `<p class="eyebrow">Жобалар · оқушылар көрмейді</p>` + drafts.map(d => `<article class="card">
       <div class="thead"><h3>${esc(d.title)}</h3><span class="chip">Жоба</span></div>
-      ${d.desc ? `<p class="tdesc" style="margin-top:6px">${esc(d.desc)}</p>` : ''}
-      <div class="meta" style="margin-top:6px">${taskTags(d)}</div>
+      ${d.desc ? `<p class="tdesc" style="margin-top:6px">${esc(d.desc)}</p>` : ''}${attHtml(d)}
+      <div class="meta" style="margin-top:6px">${taskTags(d)}<span>Дедлайн: ${esc(dueText(d))}</span></div>
       <div class="actions" style="margin-top:10px"><button class="btn primary sm" data-act="publish-draft" data-id="${esc(d.id)}">Жариялау</button><button class="btn sm danger" data-act="del" data-col="drafts" data-id="${esc(d.id)}">Өшіру</button></div></article>`).join('') : '';
   const list = $('#taskList'); if (!list) return;
   const tasks = pubTasks(S.date), studs = studentList();
@@ -838,8 +1215,8 @@ function renderPlanCurator(){
     const withProof = rows.filter(x => x.tp?.proofs?.length).length;
     const open = S.openTasks[t.id];
     return `<article class="card"><div class="tbody">
-      <div class="thead"><h3>${esc(t.title)}</h3><span class="meta">${taskTags(t)}<span>Жарияланды ${t.publishedAt ? fmtTime(t.publishedAt) : ''}</span></span></div>
-      ${t.desc ? `<p class="tdesc">${esc(t.desc)}</p>` : ''}
+      <div class="thead"><h3>${esc(t.title)}</h3><span class="meta">${taskTags(t)}<span>Дедлайн: ${esc(dueText(t))}</span></span></div>
+      ${t.desc ? `<p class="tdesc">${esc(t.desc)}</p>` : ''}${attHtml(t)}
       <div class="mini"><div class="bar" style="flex:1;width:auto"><i style="width:${pct(done, studs.length)}%"></i></div><span class="num">${done}/${studs.length}</span><span class="muted" style="font-size:.82rem">орындады · ${withProof} дәлел</span></div>
       <div class="actions"><button class="btn sm" data-act="toggle-task" data-id="${esc(t.id)}">${open ? 'Жасыру' : 'Оқушылар бойынша'}</button><button class="btn sm ghost danger" data-act="del" data-col="tasks" data-id="${esc(t.id)}">Өшіру</button></div>
       ${open ? `<div class="who">${rows.length ? rows.map(({s, tp}) => `<div class="who-row"><b>${esc(s.name)} <span class="muted" style="font-weight:400">${esc(s.group || '')}</span></b>${statusChip(tp, t)}${tp?.proofs?.length ? `<div class="proofs">${tp.proofs.map(p => proofHtml(p, false)).join('')}</div>` : ''}</div>`).join('') : '<p class="muted">Әзірге тіркелген оқушы жоқ.</p>'}</div>` : ''}
@@ -851,14 +1228,14 @@ function renderMaterials(){
   const el = $('#matList'); if (!el) return;
   const items = S.materials.filter(m => m.subject === S.subject && m.section === S.tab).sort((a,b) => (a.createdAt||0) - (b.createdAt||0));
   if (!items.length){ el.innerHTML = emptyBox(ROLE()==='curator' ? 'Бұл бөлім бос. Жоғарыдағы формадан алғашқы материалды қосыңыз.' : 'Куратор бұл бөлімге әлі материал қоспады.'); return; }
-  el.innerHTML = items.map(m => `<article class="card" style="display:flex;flex-direction:column;gap:8px">
-    <h3>${esc(m.title)}</h3>
+  el.innerHTML = items.map(m => { const lk = m.link ? safeUrl(m.link) : '', yt = /(^|\.)(youtube\.com|youtu\.be)$/i.test(lk ? new URL(lk).hostname : ''); return `<article class="card" style="display:flex;flex-direction:column;gap:8px">
+    <h3>${lk ? `<a class="mtitle" href="${esc(lk)}" target="_blank" rel="noopener">${yt ? '<span class="yt" aria-label="YouTube">▶</span>' : ''}${esc(m.title)} <span class="arr">↗</span></a>` : esc(m.title)}</h3>
     ${m.desc ? `<p class="tdesc">${esc(m.desc)}</p>` : ''}
     <div class="actions" style="margin-top:auto">
-      ${m.link ? `<a class="btn sm" href="${esc(m.link)}" target="_blank" rel="noopener">Ашу ↗</a>` : ''}
+      ${lk ? `<a class="btn sm" href="${esc(lk)}" target="_blank" rel="noopener">${yt ? 'Видеоны ашу ▶' : 'Ашу ↗'}</a>` : ''}
       ${m.file ? `<a class="btn sm" href="${esc(fileUrl('materials', m.file.path))}" target="_blank" rel="noopener">${esc(m.file.name)}</a>` : ''}
       ${ROLE()==='curator' ? `<button class="btn sm ghost danger" data-act="del" data-col="materials" data-id="${esc(m.id)}" style="margin-left:auto">Өшіру</button>` : ''}
-    </div></article>`).join('');
+    </div></article>`; }).join('');
 }
 
 function clFile(c){ return c.file ? `<div class="actions"><a class="btn sm" href="${esc(fileUrl('materials', c.file.path))}" target="_blank" rel="noopener">📄 ${esc(c.file.name)}</a></div>` : ''; }
@@ -917,6 +1294,73 @@ function qReview(q, qi, a){
   return `<div class="q">${qHead(q, qi)}${q.options.map((o, oi) => `<div class="opt ${ok(oi) ? 'right' : (picked(oi) ? 'wrong' : '')}">${esc(o)}</div>`).join('')}</div>`;
 }
 
+S.testChecked = {}; S.mistRun = null; S.mistSubj = '';
+function mistakeList(){
+  const mm = MY().mistakes || {};
+  return Object.entries(mm).map(([key, m]) => { const t = S.tests.find(x => x.id === m.t); const q = t && t.questions && t.questions[m.i]; return q ? { key, tid:m.t, i:m.i, at:m.at, q, test:t } : null; })
+    .filter(Boolean).sort((a, b) => (a.at || 0) - (b.at || 0));
+}
+function runQs(id){
+  if (id === '__mist') return (S.mistRun || []).map(k => { const [tid, i] = k.split(':'); const t = S.tests.find(x => x.id === tid); const q = t && t.questions && t.questions[+i]; return q ? { tid, i:+i, q, test:t } : null; }).filter(Boolean);
+  const t = S.tests.find(x => x.id === id); return t ? (t.questions || []).map((q, i) => ({ tid:id, i, q, test:t })) : [];
+}
+function qBlock(id, it, qi){
+  const d = (S.testDraft[id] || {})[qi], ck = (S.testChecked[id] || {})[qi];
+  const src = id === '__mist' ? `<span class="muted qhint">${esc(subjName(it.test.subject))} · ${esc(it.test.title)}</span>` : '';
+  if (ck){ const ok = qRight(it.q, d); return `<div class="qwrap ${ok ? 'is-ok' : 'is-bad'}" data-qi="${qi}">${src}${qReview(it.q, qi, d)}<p class="verdict ${ok ? 'ok' : 'bad'}">${ok ? '✓ Дұрыс!' : '✗ Қате. Дұрыс жауап жасылмен белгіленген.'}</p></div>`; }
+  return `<div class="qwrap" data-qi="${qi}">${src}${qRun(it.q, qi, d)}${qKind(it.q) !== 'single' ? `<button type="button" class="btn sm" data-act="qcheck" data-t="${esc(id)}" data-qi="${qi}">Тексеру</button>` : ''}</div>`;
+}
+function runStat(id){
+  const list = runQs(id), ck = S.testChecked[id] || {}, d = S.testDraft[id] || {};
+  let ok = 0, bad = 0; list.forEach((it, qi) => { if (ck[qi]) (qRight(it.q, d[qi]) ? ok++ : bad++); });
+  return `<span class="chip ok">Дұрыс: ${ok}</span><span class="chip bad">Қате: ${bad}</span><span class="chip">Қалды: ${list.length - ok - bad}</span>`;
+}
+function runForm(id, finishLabel, extra){
+  const list = runQs(id);
+  return `<form data-test="${esc(id)}" class="testrun"><div class="runstat" data-stat>${runStat(id)}</div>${list.map((it, qi) => qBlock(id, it, qi)).join('')}
+    <div class="actions" style="margin-top:12px"><button class="btn primary" type="submit">${esc(finishLabel)}</button>${extra || ''}</div></form>`;
+}
+function noteMistake(it, ok){
+  const my = S.preview ? S.previewMy : (S.my = S.my || { tasks:{}, checks:{}, tests:{} });
+  my.mistakes = my.mistakes || {};
+  const key = `${it.tid}:${it.i}`;
+  if (ok){ if (!my.mistakes[key]) return; delete my.mistakes[key]; }
+  else { if (my.mistakes[key]) return; my.mistakes[key] = { t:it.tid, i:it.i, at:Date.now() }; }
+  renderNav();
+  if (RO()) return;
+  pendingWrites++;
+  chain = chain.then(async () => {
+    try { await q(sb.from('progress').upsert({ user_id:S.uid, data:S.my, updated_at:new Date().toISOString() })); }
+    catch (e){ console.warn(e); toast('Сақталмады. Интернетті тексеріп, қайталап көр.'); }
+    finally { pendingWrites--; }
+  });
+}
+function checkQ(f, id, qi){
+  const it = runQs(id)[qi]; if (!it) return;
+  const a = qRead(f, it.q, qi), k = qKind(it.q);
+  if (k === 'single' && a < 0) return;
+  if (k === 'multi' && !a.length){ toast('Кемінде бір жауап таңда'); return; }
+  if (k === 'match' && a.some(x => x < 0)){ toast('Барлық жолға жауап таңда'); return; }
+  (S.testDraft[id] = S.testDraft[id] || {})[qi] = a;
+  (S.testChecked[id] = S.testChecked[id] || {})[qi] = true;
+  const w = f.querySelector(`.qwrap[data-qi="${qi}"]`); if (w) w.outerHTML = qBlock(id, it, qi);
+  const st = f.querySelector('[data-stat]'); if (st) st.innerHTML = runStat(id);
+  noteMistake(it, qRight(it.q, a));
+}
+function renderMistakes(){
+  const el = $('#mistBox'); if (!el) return;
+  if (S.mistRun){ el.innerHTML = runForm('__mist', 'Аяқтау'); return; }
+  const all = mistakeList();
+  if (!all.length){ el.innerHTML = emptyBox('Қате сұрақ жоқ. Жарайсың! Тест тапсырғанда қателескен сұрақтарың осында пайда болады.'); return; }
+  const subjIds = [...new Set(all.map(m => m.test.subject))];
+  const list = S.mistSubj ? all.filter(m => m.test.subject === S.mistSubj) : all;
+  const byTest = {}; list.forEach(m => { (byTest[m.tid] = byTest[m.tid] || { t:m.test, n:0 }).n++; });
+  el.innerHTML = `<div class="card" style="display:flex;flex-direction:column;gap:14px">
+    <div class="mini" style="gap:12px;flex-wrap:wrap"><span class="score num">${list.length}</span><span class="muted">қате сұрақ</span></div>
+    ${subjIds.length > 1 ? `<div class="pills" style="display:flex">${[['', 'Барлық пән'], ...subjIds.map(id => [id, subjName(id) || 'Пән'])].map(([id, n]) => `<a href="#" data-act="mist-subj" data-id="${esc(id)}" ${S.mistSubj === id ? 'aria-current="page"' : ''}>${esc(n)}</a>`).join('')}</div>` : ''}
+    <div class="who" style="border:0;padding:0">${Object.values(byTest).map(x => `<div class="who-row"><span>${esc(subjName(x.t.subject))} · ${esc(x.t.title)}</span><span class="num">${x.n}</span></div>`).join('')}</div>
+    <div class="actions"><button class="btn primary" data-act="mist-start">Қателерді қайта өту (${list.length})</button></div></div>`;
+}
 function renderTests(){
   const el = $('#testList'); if (!el) return;
   const items = S.tests.filter(t => t.subject === S.subject && (t.section || 'tests') === S.tab).sort((a,b) => (a.createdAt||0) - (b.createdAt||0));
@@ -938,8 +1382,7 @@ function renderTests(){
     const draft = S.testDraft[t.id] || {};
     let body = '';
     if (open){
-      body = `<form data-test="${esc(t.id)}" class="testrun">${qs.map((q, qi) => qRun(q, qi, draft[qi])).join('')}
-        <div class="actions" style="margin-top:12px"><button class="btn primary" type="submit">Тапсыру</button><button class="btn ghost" type="button" data-act="open-test" data-id="${esc(t.id)}">Болдырмау</button></div></form>`;
+      body = runForm(t.id, 'Тестті аяқтау', `<button class="btn ghost" type="button" data-act="open-test" data-id="${esc(t.id)}">Болдырмау</button>`);
     } else if (mine){
       body = `<div class="mini" style="gap:14px"><span class="score num">${mine.score}/${mine.total}</span><span class="muted">${pct(mine.score, mine.total)}% · ${mine.at ? fmtDT(mine.at) : ''}</span></div>
         <details><summary class="muted" style="cursor:pointer">Жауаптарымды көру</summary>${qs.map((q, qi) => qReview(q, qi, mine.answers?.[qi])).join('')}</details>`;
@@ -957,22 +1400,29 @@ function studentStats(s){
   const since = s.joinedAt ? ymd(new Date(s.joinedAt)) : '0000';
   const all = S.tasks.filter(t => t.date >= since && t.date <= today());
   const allDone = all.filter(t => p.tasks?.[t.id]?.done).length;
+  const allProof = all.filter(t => p.tasks?.[t.id]?.proofs?.length).length;
   const tests = Object.values(p.tests || {});
   const testAvg = tests.length ? Math.round(tests.reduce((a,x)=>a+pct(x.score,x.total),0)/tests.length) : null;
   let clN = 0, clT = 0; S.checklists.forEach(c => { const its = c.items||[]; clT += its.length; clN += its.filter((_,i)=>p.checks?.[c.id]?.[i]).length; });
-  return { p, dayTasks, dayDone, dayProof, all, allDone, testAvg, cl: pct(clN, clT) };
+  return { p, dayTasks, dayDone, dayProof, all, allDone, allProof, testAvg, cl: pct(clN, clT) };
 }
 function renderStudents(){
   const el = $('#stuList'); if (!el) return;
   const studs = studentList();
   if (!studs.length){ el.innerHTML = emptyBox('Әзірге тіркелген оқушы жоқ. Сайт сілтемесін оқушыларға жіберіңіз: олар алғаш кіргенде аты-жөнін жазып тіркеледі.'); $('#stuDetail').innerHTML=''; return; }
-  el.innerHTML = `<div class="tablewrap"><table><thead><tr><th>Оқушы</th><th>Поток</th><th>${esc(fmtDate(S.date))}</th><th>Дәлел</th><th>Барлық тапсырма</th><th>Чек-лист</th><th>Тест</th></tr></thead><tbody>
-    ${studs.map(s => { const x = studentStats(s); return `<tr data-act="open-stu" data-id="${esc(s.id)}" class="${S.openStudent===s.id?'open':''}" tabindex="0">
-      <td><b>${esc(s.name)}</b></td><td class="muted">${esc(s.group||'—')}</td>
-      <td>${x.dayTasks.length ? `<span class="chip ${x.dayDone===x.dayTasks.length?'ok':(S.date<today()?'bad':'')}">${x.dayDone}/${x.dayTasks.length}</span>` : '<span class="muted">—</span>'}</td>
-      <td class="num">${x.dayTasks.length ? x.dayProof + '/' + x.dayTasks.length : '—'}</td>
-      <td><span class="mini"><span class="bar"><i style="width:${pct(x.allDone,x.all.length)}%"></i></span><span class="num">${pct(x.allDone,x.all.length)}%</span></span></td>
-      <td class="num">${x.cl}%</td><td class="num">${x.testAvg===null?'—':x.testAvg+'%'}</td></tr>`; }).join('')}
+  const all = S.stuTab === 'all';
+  document.querySelectorAll('[data-act="stu-tab"]').forEach(b => b.classList.toggle('on', b.dataset.v === (all ? 'all' : 'day')));
+  const sd = $('#stuDate'); if (sd) sd.hidden = all;
+  const bar = v => `<span class="mini"><span class="bar"><i style="width:${v}%"></i></span><span class="num">${v}%</span></span>`;
+  const row = (s, cells) => `<tr data-act="open-stu" data-id="${esc(s.id)}" class="${S.openStudent===s.id?'open':''}" tabindex="0"><td><b>${esc(s.name)}</b></td><td class="muted">${esc(s.group||'—')}</td>${cells}</tr>`;
+  el.innerHTML = all
+    ? `<div class="tablewrap"><table><thead><tr><th>Оқушы</th><th>Поток</th><th>Тапсырмалар</th><th>Дәлел</th><th>Чек-лист</th><th>Тест</th></tr></thead><tbody>
+    ${studs.map(s => { const x = studentStats(s); return row(s, `<td>${bar(pct(x.allDone, x.all.length))}</td><td>${bar(pct(x.allProof, x.all.length))}</td><td class="num">${x.cl}%</td><td class="num">${x.testAvg===null?'—':x.testAvg+'%'}</td>`); }).join('')}
+  </tbody></table></div>`
+    : `<div class="tablewrap"><table><thead><tr><th>Оқушы</th><th>Поток</th><th>Орындалды · ${esc(fmtDate(S.date))}</th><th>Дәлел</th></tr></thead><tbody>
+    ${studs.map(s => { const x = studentStats(s), n = x.dayTasks.length; if (!n) return row(s, '<td class="muted">—</td><td class="muted">—</td>');
+      const v = pct(x.dayDone, n), cls = x.dayDone === n ? 'ok' : (S.date < today() ? 'bad' : '');
+      return row(s, `<td><span class="mini"><span class="bar"><i style="width:${v}%"></i></span><span class="chip ${cls}">${v}%</span><span class="num muted">${x.dayDone}/${n}</span></span></td><td><span class="chip ${x.dayProof === n ? 'ok' : ''} num">${x.dayProof}/${n}</span></td>`); }).join('')}
   </tbody></table></div>`;
   const d = $('#stuDetail'); const s = S.students[S.openStudent];
   if (!s){ d.innerHTML = ''; return; }
@@ -992,6 +1442,147 @@ function renderStudents(){
   </article>`;
 }
 
+
+/* ---------- Study Studio home ---------- */
+const SI = k => `<svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[k]}</svg>`;
+function streakDays(){
+  const m = MY(), t0 = today(); let n = 0, d = t0;
+  const by = {}; S.tasks.forEach(t => { (by[t.date] = by[t.date] || []).push(t); });
+  const first = Object.keys(by).sort()[0]; if (!first) return 0;
+  for (let i = 0; i < 400 && d >= first; i++, d = shiftDate(d, -1)){
+    const ts = by[d]; if (!ts) continue;
+    if (ts.every(t => m.tasks?.[t.id]?.done)) n++;
+    else if (d !== t0) break;
+  }
+  return n;
+}
+function myPointsToday(){ const m = MY(); return 10 * pubTasks(today()).filter(t => m.tasks?.[t.id]?.done && m.tasks?.[t.id]?.proofs?.length).length; }
+function rankInfo(){
+  const mine = myPointsToday();
+  let list = (S.ratingDay === today() ? S.rating || [] : []).map(x => ({ ...x, points: x.me ? mine : (x.points || 0) }));
+  if (!list.some(x => x.me) && S.uid && !S.preview) list.push({ name: (S.me && S.me.name) || '', grp: (S.me && S.me.group) || '', points: mine, me: true });
+  list.sort((a, b) => b.points - a.points || String(a.name).localeCompare(String(b.name), 'kk'));
+  list.forEach(x => { x.place = 1 + list.filter(y => y.points > x.points).length; });
+  const me = list.find(x => x.me) || { place: 0, points: mine };
+  return { list, place: me.place, pts: mine, n: list.length };
+}
+function testAvg(p){ const ts = Object.values((p && p.tests) || {}).filter(x => x && x.total); return ts.length ? { avg: Math.round(ts.reduce((a, x) => a + pct(x.score, x.total), 0) / ts.length), n: ts.length } : null; }
+function renderHome(){
+  const hero = $('#hero'), st = $('#stats'), sc = $('#subjCards'); if (!hero) return;
+  const cur = ROLE() === 'curator', t = pubTasks(today()), m = MY();
+  const name = cur ? (S.myName || 'куратор') : (S.preview ? 'оқушы' : ((S.me && (S.me.first || firstName(S.me.name))) || ''));
+  const done = t.filter(x => m.tasks?.[x.id]?.done).length;
+  const studs = cur ? studentList() : [];
+  const avgDone = cur && t.length && studs.length ? Math.round(studs.reduce((a, s) => a + pct(t.filter(x => S.progress[s.id]?.tasks?.[x.id]?.done).length, t.length), 0) / studs.length) : 0;
+  const sub = cur
+    ? (t.length ? `Бүгін ${t.length} тапсырма жарияланды. Оқушылар орташа есеппен ${avgDone}% орындады.` : 'Бүгінге әлі тапсырма жарияланбаған. Төмендегі формадан қосыңыз.')
+    : (t.length ? (done === t.length ? 'Бүгінгі жоспар толық орындалды. Жарайсың!' : `Бүгін ${t.length} тапсырманың ${done}-і орындалды. Әр күнің — жаңа нұсқаңа жасалған кішкентай қадам.`) : 'Бүгінге тапсырма әзірге жоқ. Пәндердегі материалдарды қайталап ал.');
+  hero.innerHTML = `<div class="hero-content"><span class="eyebrow-pill"><i></i>${esc(fmtDate(today()).toUpperCase())}</span>
+      <h2>Сәлем, ${esc(name || 'досым')}!</h2><p>${esc(sub)}</p>
+      <button class="btn primary" data-act="jump-tasks">${cur ? 'Тапсырма қосу →' : 'Бүгінгі жоспарым →'}</button></div>
+    <div class="hero-art" aria-hidden="true"><div class="circle">${bot()}</div><div class="float-tag tag-one">✦ 140 балл</div>${t.length ? `<div class="float-tag tag-two">${cur ? `${avgDone}% орындалды` : `${done}/${t.length} бүгін ✓`}</div>` : ''}</div>`;
+  const stat = (lbl, icon, cls, val, foot) => `<div class="stat"><div class="st"><span>${lbl}</span><span class="si ${cls}">${SI(icon)}</span></div><strong>${val}</strong>${foot}</div>`;
+  if (cur){
+    st.innerHTML = stat('Бүгінгі тапсырма', 'check', 'c2', `${t.length}`, `<small>${S.drafts.filter(d => d.date === today()).length} жоба сақтаулы</small>`)
+      + stat('Оқушылар', 'users', 'c1', `${studs.length}`, '<small>тіркелген</small>')
+      + stat('Бүгін орындалды', 'chart', 'c3', `${avgDone}%`, `<div class="bar"><i style="width:${avgDone}%"></i></div>`);
+  } else {
+    const sk = streakDays(), lv = sk >= 14 ? 4 : sk >= 7 ? 3 : sk >= 3 ? 2 : sk >= 1 ? 1 : 0;
+    const rk = rankInfo();
+    st.innerHTML = stat('Қатарынан', 'flame', `c1 fl fl-${lv}`, `${sk} <span>күн</span>`, `<small>${lv >= 3 ? 'Отың лаулап тұр! 🔥' : 'жоспар толық орындалған күндер'}</small>`)
+      + `<div class="stat ubt"><div class="st"><span>Қаңтар ҰБТ-ға дейін:</span><span class="si c2">${SI('clock')}</span></div><div class="cd" id="ubtCd">${ubtHtml()}</div></div>`
+      + `<button type="button" class="stat rank ${rk.place === 1 && rk.pts > 0 ? 'top1' : ''}" data-act="rank" aria-expanded="${!!S.showRank}"><div class="st"><span>Күндік рейтинг</span><span class="si c3">${SI('trophy')}</span></div>
+          <strong>${rk.place || 0} / ${rk.n || 0}</strong><small>${rk.pts} XP</small></button>`;
+    let lb = $('#rankBox');
+    if (S.showRank){
+      if (!lb){ lb = document.createElement('section'); lb.id = 'rankBox'; lb.className = 'card rankbox'; st.after(lb); }
+      lb.innerHTML = `<div class="thead"><h3>Бүгінгі рейтинг · ${esc(fmtDate(today()))}</h3><button class="btn sm ghost" data-act="rank">Жабу</button></div>
+        <p class="muted" style="font-size:.8rem;margin:4px 0 10px">Әр тапсырмаға белгі қойып, дәлел жүктесең — 10 балл. Балл тең болса, орын да бірдей.</p>
+        ${rk.list.length ? `<ol class="lb">${rk.list.map(x => `<li class="${x.me ? 'me' : ''} ${x.place === 1 && x.points > 0 ? 'gold' : ''}"><span class="pl num">${x.place}</span><span class="nm">${esc(x.name || 'Оқушы')}${x.me ? ' <em>(сен)</em>' : ''}</span><span class="muted gp">${esc(x.grp || '')}</span><b class="num">${x.points}</b></li>`).join('')}</ol>`
+          : `<p class="muted">${S.ratingOk === false ? 'Рейтинг әлі қосылмаған: куратор Supabase-те рейтинг SQL-ін іске қосуы керек.' : 'Әзірге дерек жоқ.'}</p>`}`;
+    } else if (lb) lb.remove();
+  }
+  if (sc){
+    const subs = subjects();
+    sc.innerHTML = subs.map(s => {
+      const tests = S.tests.filter(x => x.subject === s.id), mats = S.materials.filter(x => x.subject === s.id).length, cls = S.checklists.filter(x => x.subject === s.id).length;
+      const taken = tests.filter(x => m.tests?.[x.id]).length, v = pct(taken, tests.length);
+      const href = `#s-${esc(s.id)}-${esc((secs(s.id)[0] || {}).id || 'analysis')}`;
+      return `<a class="scard" href="${href}"><span class="sic">${ico(s.id)}</span><b>${esc(s.name)}</b>
+        <p>${tests.length} тест · ${mats} материал${cls ? ` · ${cls} чек-лист` : ''}</p>
+        ${!cur && tests.length ? `<span class="pct num">${v}%</span><div class="bar"><i style="width:${v}%"></i></div>` : ''}</a>`;
+    }).join('') || emptyBox('Пән әлі қосылмаған.');
+  }
+}
+function focusCfg(){ let c = {}; try { c = JSON.parse(localStorage.getItem('levelup-focus') || '{}') || {}; } catch {} const ok = n => Number.isFinite(n) && n >= 1 && n <= 180; return { study: ok(+c.study) ? +c.study : 25, brk: ok(+c.brk) ? +c.brk : 5 }; }
+S.focus = { phase:'study', left: focusCfg().study * 60, endAt: 0, timer: null, edit: false };
+const phaseLen = ph => (ph === 'study' ? focusCfg().study : focusCfg().brk) * 60;
+function focusLeft(){ const f = S.focus; return f.endAt ? Math.max(0, Math.round((f.endAt - Date.now()) / 1000)) : f.left; }
+let audioCtx = null;
+function chime(){
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    const t = audioCtx.currentTime;
+    [0, .35, .7].forEach((d, k) => { const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = 'sine'; o.frequency.value = [880, 1046.5, 1318.5][k];
+      g.gain.setValueAtTime(0.0001, t + d); g.gain.exponentialRampToValueAtTime(0.35, t + d + .02); g.gain.exponentialRampToValueAtTime(0.0001, t + d + .5);
+      o.connect(g).connect(audioCtx.destination); o.start(t + d); o.stop(t + d + .55); });
+  } catch {}
+}
+function paintFocus(){
+  const f = S.focus;
+  if (f.endAt && focusLeft() <= 0){
+    chime();
+    const next = f.phase === 'study' ? 'break' : 'study';
+    toast(next === 'break' ? `Жарайсың! Енді ${focusCfg().brk} минут демал ☕` : `Демалыс бітті. ${focusCfg().study} минут оқуға кірісейік 📚`);
+    f.phase = next; f.left = phaseLen(next); f.endAt = Date.now() + f.left * 1000;
+  }
+  const l = focusLeft(), tot = phaseLen(f.phase);
+  const t = $('#fText'), r = $('#fRing'), b = $('#fBtn'), ph = $('#fPhase');
+  if (t) t.textContent = `${pad(Math.floor(l / 60))}:${pad(l % 60)}`;
+  if (r){ r.style.setProperty('--p', Math.min(100, 100 * (tot - l) / tot) + '%'); r.classList.toggle('brk', f.phase === 'break'); }
+  if (ph){ ph.textContent = f.phase === 'study' ? 'Оқу' : 'Демалыс'; ph.classList.toggle('brk', f.phase === 'break'); }
+  if (b){ b.textContent = f.endAt ? 'Ⅱ Үзіліс' : (l === tot ? '▶ Бастау' : '▶ Жалғастыру'); b.classList.toggle('running', !!f.endAt); }
+}
+function toggleFocus(){
+  const f = S.focus;
+  try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') audioCtx.resume(); } catch {}
+  if (f.endAt){ f.left = focusLeft(); f.endAt = 0; clearInterval(f.timer); f.timer = null; }
+  else { f.endAt = Date.now() + f.left * 1000; f.timer = setInterval(paintFocus, 1000); }
+  paintFocus();
+}
+function resetFocus(){ const f = S.focus; clearInterval(f.timer); f.timer = null; f.endAt = 0; f.phase = 'study'; f.left = phaseLen('study'); paintFocus(); }
+function focusHtml(){
+  const c = focusCfg(), f = S.focus;
+  return `<section class="rbox focus"><div class="fhead"><h3>Фокус бұрышы 🍵</h3><span class="fpill" id="fPhase">Оқу</span></div>
+    <div class="fmain"><div class="ring" id="fRing"><div class="ring-in"><strong class="num" id="fText">--:--</strong></div></div>
+    <div class="fcopy"><b>${c.study} мин оқу · ${c.brk} мин демалыс</b><p>Уақыт біткенде дыбыс шығады да, келесі кезең өзі басталады.</p></div></div>
+    <div class="actions factions"><button type="button" class="btn sm" id="fBtn" data-act="focus"></button><button type="button" class="btn sm ghost" data-act="focus-reset" aria-label="Басынан бастау" title="Басынан бастау"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.3-5.6M4 4v4.5h4.5"/></svg></button><button type="button" class="btn sm ghost" data-act="focus-edit" aria-label="Минуттарды өзгерту" title="Минуттарды өзгерту"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button></div>
+    ${f.edit ? `<form class="fset" id="focusForm"><label class="f">Оқу, мин<input type="number" id="fStudy" min="1" max="180" value="${c.study}" required></label><label class="f">Демалыс<input type="number" id="fBrk" min="1" max="180" value="${c.brk}" required></label><button class="btn sm primary">Сақтау</button></form>` : ''}
+  </section>`;
+}
+function renderRail(){
+  const rail = $('#rail'), lay = $('#layout'); if (!rail) return;
+  const on = S.view === 'plan' && !needsReg() && S.role !== 'anon';
+  rail.hidden = !on; if (lay) lay.classList.toggle('norail', !on);
+  if (!on) return;
+  const cur = ROLE() === 'curator', m = MY(), t0 = today();
+  const d = parseD(S.date), dow = (d.getDay() + 6) % 7; d.setDate(d.getDate() - dow);
+  const days = Array.from({ length:7 }, (_, i) => { const x = new Date(d); x.setDate(d.getDate() + i); return ymd(x); });
+  const WL = ['Дс','Сс','Ср','Бс','Жм','Сб','Жс'];
+  const dayDone = ds => { const ts = pubTasks(ds); return ts.length && (cur || ts.every(x => m.tasks?.[x.id]?.done)); };
+  const now = Date.now();
+  const up = S.tasks.filter(x => dueOf(x) > now && (cur || !m.tasks?.[x.id]?.done)).sort((a, b) => dueOf(a) - dueOf(b))[0];
+  const md = parseD(S.date);
+  rail.innerHTML = `<section class="rbox"><h3>${cur ? 'Апта' : 'Менің аптам'}</h3><p class="lbl">${MONTHS[md.getMonth()][0].toUpperCase() + MONTHS[md.getMonth()].slice(1)} ${md.getFullYear()}</p>
+      <div class="week">${WL.map(w => `<span class="wl">${w}</span>`).join('')}${days.map(ds => `<button type="button" data-act="goto-day" data-d="${ds}" class="${ds === S.date ? 'sel' : ''} ${ds === t0 ? 'now' : ''} ${dayDone(ds) ? 'done' : ''}" aria-label="${esc(fmtDate(ds))}">${+ds.slice(8)}</button>`).join('')}</div>
+      ${up ? `<div class="upc"><span class="ui">📝</span><div><b>${esc(up.title)}</b><small>Дедлайн: ${esc(ymd(new Date(dueOf(up))) === t0 ? 'бүгін, ' + fmtTime(dueOf(up)) : fmtDT(dueOf(up)))}</small></div></div>` : `<div class="upc"><span class="ui">✨</span><div><b>${cur ? 'Алдағы дедлайн жоқ' : 'Барлығы орындалды'}</b><small>Жаңа тапсырма осында шығады</small></div></div>`}
+    </section>
+    ${focusHtml()}
+    <section class="novacard"><span class="nic">${bot()}</span><h3>NOVA жанында ✨</h3><p>${cur ? 'Сайттың қай бөлімі не үшін екенін түсіндіріп берем.' : 'Қиын тақырып па, әлде мотивация керек пе? Мен әрдайым осындамын.'}</p><button class="btn sm" type="button" data-act="open-nova">NOVA-мен сөйлесу →</button></section>`;
+  paintFocus();
+}
+
 /* ---------- helper panel ---------- */
 function renderHelper(){
   const r = S.role === 'curator' && !S.preview ? 'curator' : 'student';
@@ -1000,29 +1591,28 @@ function renderHelper(){
   const tip = TIPS[r][key] || TIPS[r].plan;
   const where = S.view === 'subject' ? `${subjName(S.subject) || 'Пән'} · ${cs0 ? cs0.name : ''}` : (S.view === 'students' ? 'Оқушылар' : 'Күндік жоспар');
   const msgs = $('#hmsgs');
-  msgs.innerHTML = `<div class="msg bot">Сәлем! Мен — NOVA. Қазір сен «${esc(where)}» бөліміндесің. ${esc(tip)}</div>` + S.chat.map(m => `<div class="msg ${m.me?'me':'bot'}">${esc(m.text)}</div>`).join('');
-  $('#hform').hidden = !S.sample;
+  const nm = S.role === 'curator' && !S.preview ? (S.myName || '') : ((S.me && (S.me.first || firstName(S.me.name))) || '');
+  msgs.innerHTML = `<div class="msg bot">Сәлем${nm ? ', ' + esc(nm) : ''}! Мен — NOVA 🤖 Қалайсың? Сабақ бойынша сұрақ қойсаң да, жай ғана көңіл-күйің туралы жазсаң да — тыңдаймын.</div><div class="msg bot">Қазір сен «${esc(where)}» бөліміндесің. ${esc(tip)}</div>` + S.chat.map(m => `<div class="msg ${m.me?'me':'bot'}">${esc(m.text)}</div>`).join('');
+  $('#hform').hidden = !S.uid || S.preview;
   msgs.scrollTop = msgs.scrollHeight;
 }
-$('#greet').addEventListener('click', () => { const p = $('#hpanel'); p.hidden = !p.hidden; if (!p.hidden){ renderHelper(); if (S.sample) $('#hq').focus(); } });
+$('#greet').addEventListener('click', () => { const p = $('#hpanel'); p.hidden = !p.hidden; if (!p.hidden){ renderHelper(); if (S.uid) $('#hq').focus(); } });
 $('#hpClose').addEventListener('click', () => $('#hpanel').hidden = true);
 $('#hform').addEventListener('submit', async e => {
   e.preventDefault();
-  const q = $('#hq').value.trim(); if (!q || !S.sample) return;
-  $('#hq').value = '';
+  const inp = $('#hq'), q = inp.value.trim(); if (!q || !S.uid || S.novaBusy) return;
+  inp.value = ''; S.novaBusy = true;
   S.chat.push({ me:true, text:q }); const ans = { text:'Ойланып жатырмын…' }; S.chat.push(ans); renderHelper();
-  const bubble = $('#hmsgs').lastElementChild;
-  const hist = S.chat.slice(-8, -1).map(m => (m.me ? 'Пайдаланушы: ' : 'NOVA: ') + m.text).join('\n');
-  const where = S.view === 'subject' ? `${subjName(S.subject)}, ${(curSec() || {}).name || ''}` : 'Күндік жоспар';
-  const prompt = `Сен — NOVA, LEVEL UP атты оқу платформасының мейірімді робот-көмекшісісің. Платформадағы пәндер: ${subjects().map(s=>s.name).join(', ')}. Пайдаланушы: ${S.role==='curator'?'куратор':'оқушы'}. Ағымдағы бөлім: ${where}. Тек қазақ тілінде, қысқа (5 сөйлемге дейін), түсінікті жауап бер. Оқушыға дайын жауапты бірден берме, ойлануға бағытта.\n\nСөйлесу:\n${hist}\n\nЖаңа сұрақ: ${q}`;
+  const bubble = $('#hmsgs').lastElementChild; bubble.classList.add('typing');
+  const history = S.chat.slice(0, -1).slice(-14).map(m => ({ role: m.me ? 'user' : 'assistant', content: m.text }));
   try {
-    const res = await S.sample(prompt, { modelTier:'quick', cache:false, onText: ({ text }) => { ans.text = text; bubble.textContent = text; } });
-    ans.text = res.text; bubble.textContent = res.text;
-  } catch (err){
-    ans.text = err && err.code === 'not_granted' ? 'Сұрақтарға жауап беру рұқсаты өшірулі. Бөлімдер бойынша кеңестерім әлі де осында.' : 'Қазір жауап бере алмадым. Сәлден кейін қайталап көр.';
-    bubble.textContent = ans.text;
-    if (err && err.code === 'not_granted'){ S.sample = null; $('#hform').hidden = true; }
-  }
+    const { data } = await sb.auth.getSession();
+    const r = await fetch('/api/nova', { method:'POST', headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${data.session ? data.session.access_token : ''}` }, body: JSON.stringify({ messages: history }) });
+    let j = {}; try { j = await r.json(); } catch {}
+    ans.text = j.text || (r.status === 404 ? 'NOVA сервері әлі іске қосылмаған.' : 'Қазір жауап бере алмадым. Сәлден кейін қайталап көр.');
+  } catch { ans.text = 'Интернет байланысын тексеріп, қайта жазып көр.'; }
+  S.novaBusy = false; bubble.classList.remove('typing'); bubble.textContent = ans.text;
+  $('#hmsgs').scrollTop = $('#hmsgs').scrollHeight; inp.focus();
 });
 
 /* ---------- events ---------- */
@@ -1031,6 +1621,13 @@ document.addEventListener('click', async e => {
   const act = b.dataset.act;
   if (act === 'day'){ S.date = shiftDate(S.date, +b.dataset.d); syncDate(); return; }
   if (act === 'today'){ S.date = today(); syncDate(); return; }
+  if (act === 'goto-day'){ S.date = b.dataset.d; syncDate(); return; }
+  if (act === 'jump-tasks'){ const el = ROLE() === 'curator' ? $('#taskForm') : $('#taskList'); if (el) el.scrollIntoView({ behavior:'smooth', block:'start' }); return; }
+  if (act === 'rank'){ S.showRank = !S.showRank; if (S.showRank && S.uid) loadRating().then(renderData).catch(() => {}); renderData(); return; }
+  if (act === 'focus'){ toggleFocus(); return; }
+  if (act === 'focus-reset'){ resetFocus(); return; }
+  if (act === 'focus-edit'){ S.focus.edit = !S.focus.edit; renderRail(); if (S.focus.edit){ const i = $('#fStudy'); if (i) i.focus(); } return; }
+  if (act === 'open-nova'){ const p = $('#hpanel'); p.hidden = false; renderHelper(); const i = $('#hq'); if (i && !i.closest('[hidden]')) i.focus(); return; }
   if (act === 'preview-off'){ setPreview(false); return; }
   if (act === 'add-subj'){ S.addingSubject = true; renderNav(); return; }
   if (act === 'add-sec'){ e.preventDefault(); S.secForm = 'add'; renderShell(); const i = $('#sName'); if (i) i.focus(); return; }
@@ -1050,9 +1647,13 @@ document.addEventListener('click', async e => {
     return;
   }
   if (act === 'toggle-task'){ S.openTasks[b.dataset.id] = !S.openTasks[b.dataset.id]; renderData(); return; }
+  if (act === 'stu-tab'){ S.stuTab = b.dataset.v; renderData(); return; }
   if (act === 'open-stu'){ S.openStudent = S.openStudent === b.dataset.id ? null : b.dataset.id; renderData(); if (S.openStudent) $('#stuDetail').scrollIntoView({ behavior:'smooth', block:'start' }); return; }
-  if (act === 'open-test'){ S.testOpen = S.testOpen === b.dataset.id ? null : b.dataset.id; renderData(); return; }
+  if (act === 'open-test'){ delete S.testChecked[b.dataset.id]; delete S.testDraft[b.dataset.id]; S.testOpen = S.testOpen === b.dataset.id ? null : b.dataset.id; renderData(); return; }
   if (act === 'add-q'){ addQ(); return; }
+  if (act === 'qcheck'){ const f = b.closest('form'); if (f) checkQ(f, b.dataset.t, +b.dataset.qi); return; }
+  if (act === 'mist-start'){ const l = mistakeList().filter(m => !S.mistSubj || m.test.subject === S.mistSubj); S.mistRun = l.map(m => m.key); S.testDraft.__mist = {}; S.testChecked.__mist = {}; renderData(); return; }
+  if (act === 'mist-subj'){ e.preventDefault(); S.mistSubj = b.dataset.id || ''; renderData(); return; }
   if (act === 'rm-q'){ b.closest('.qb').remove(); renumberQ(); return; }
   if (act === 'del' || act === 'del-subj'){
     if (!b.dataset.armed){ b.dataset.armed = '1'; const old = b.textContent; b.textContent = act === 'del-subj' ? 'Пәнді өшіруді растау?' : 'Растау?'; setTimeout(() => { if (b.isConnected){ delete b.dataset.armed; b.textContent = old; } }, 3500); return; }
@@ -1095,6 +1696,7 @@ function syncDate(){
 document.addEventListener('change', async e => {
   const t = e.target;
   if (t.id === 'planDate'){ if (t.value){ S.date = t.value; syncDate(); } return; }
+  if (t.id === 'tFiles'){ $('#tFilesName').textContent = [...t.files].map(x => x.name).join(', '); return; }
   if (t.id === 'mFile'){ $('#mFileName').textContent = t.files[0] ? t.files[0].name : ''; return; }
   if (t.id === 'cFile'){ $('#cFileName').textContent = t.files[0] ? t.files[0].name : ''; return; }
   if (t.id === 'tSubj'){ fillSecSelect(); return; }
@@ -1125,7 +1727,7 @@ document.addEventListener('change', async e => {
     return;
   }
   const tf = t.closest('form.testrun');
-  if (tf && /^q\d+/.test(t.name || '')){ const id = tf.dataset.test, tt = S.tests.find(x => x.id === id), qi = parseInt(t.name.slice(1)); if (tt && tt.questions[qi]){ S.testDraft[id] = S.testDraft[id] || {}; S.testDraft[id][qi] = qRead(tf, tt.questions[qi], qi); } }
+  if (tf && /^q\d+/.test(t.name || '')){ const id = tf.dataset.test, qi = parseInt(t.name.slice(1)), it = runQs(id)[qi]; if (it){ S.testDraft[id] = S.testDraft[id] || {}; S.testDraft[id][qi] = qRead(tf, it.q, qi); if (qKind(it.q) === 'single' && t.type === 'radio') checkQ(tf, id, qi); } }
 });
 
 document.addEventListener('submit', async e => {
@@ -1176,15 +1778,34 @@ document.addEventListener('submit', async e => {
     location.hash = `s-${id}-analysis`;
     return;
   }
+  if (f.id === 'focusForm'){
+    e.preventDefault();
+    const cl = n => Math.min(180, Math.max(1, Math.round(+n || 0)));
+    const c = { study: cl($('#fStudy').value), brk: cl($('#fBrk').value) };
+    try { localStorage.setItem('levelup-focus', JSON.stringify(c)); } catch {}
+    S.focus.edit = false; if (!S.focus.endAt) S.focus.left = phaseLen(S.focus.phase);
+    renderRail(); toast(`Сақталды: ${c.study} мин оқу, ${c.brk} мин демалыс`); return;
+  }
   if (f.id === 'taskForm'){
     e.preventDefault();
     const mode = e.submitter?.dataset.mode || 'publish';
     const title = $('#tTitle').value.trim(); if (!title) return;
     const data = { title, desc: $('#tDesc').value.trim(), subject: $('#tSubj').value, section: $('#tSec').value, date: S.date, createdAt: Date.now() };
-    const row = { title:data.title, descr:data.desc, subject:data.subject || null, section:data.section, date:data.date };
+    const dd = $('#tDlDate').value || S.date, dt = $('#tDlTime').value || '23:59';
+    const dl = new Date(`${dd}T${dt}`);
+    if (isNaN(dl)) return toast('Дедлайн дұрыс емес');
+    const links = $('#tLinks').value.split(/\n+/).map(safeUrl).filter(Boolean).map(url => ({ url }));
+    const btns = f.querySelectorAll('[type=submit]'); btns.forEach(b => b.disabled = true);
+    const files = [];
+    for (const fi of $('#tFiles').files){
+      try { files.push(await upMat(`tasks/${Date.now()}-${safeName(fi.name)}`, fi, btns[btns.length - 1])); }
+      catch (err){ console.warn(err); toast(err.message); await new Promise(r => setTimeout(r, 2500)); }
+    }
+    btns.forEach(b => b.disabled = false);
+    const row = { title:data.title, descr:data.desc, subject:data.subject || null, section:data.section, date:data.date, deadline:dl.toISOString(), attachments:[...links, ...files] };
     if (mode === 'publish') await cur(() => q(sb.from('tasks').insert({ ...row, published:true, published_at:new Date().toISOString() })), 'Жарияланды: оқушылар көре алады');
     else await cur(() => q(sb.from('tasks').insert({ ...row, published:false })), 'Жоба сақталды');
-    f.reset(); return;
+    f.reset(); $('#tDlDate').value = S.date; $('#tFilesName').textContent = ''; return;
   }
   if (f.id === 'matForm'){
     e.preventDefault();
@@ -1192,8 +1813,8 @@ document.addEventListener('submit', async e => {
     const btn = f.querySelector('[type=submit]'); btn.disabled = true;
     let file = null; const fi = $('#mFile').files[0];
     if (fi){
-      try { const path = `${S.subject}/${Date.now()}-${safeName(fi.name)}`; const up = await sb.storage.from('materials').upload(path, fi, { contentType: fi.type || undefined }); if (up.error) throw up.error; file = { path, name:fi.name }; }
-      catch { toast('Файл жүктелмеді'); btn.disabled = false; return; }
+      try { file = await upMat(`${S.subject}/${Date.now()}-${safeName(fi.name)}`, fi, btn); }
+      catch (err){ console.warn(err); toast(err.message, 9000); btn.disabled = false; return; }
     }
     await cur(() => q(sb.from('materials').insert({ subject:S.subject, section:S.tab, title, descr:$('#mDesc').value.trim(), link:$('#mLink').value.trim(), file_path:file ? file.path : null, file_name:file ? file.name : null })), 'Қосылды');
     f.reset(); $('#mFileName').textContent = ''; btn.disabled = false; return;
@@ -1205,7 +1826,7 @@ document.addEventListener('submit', async e => {
     if (!items.length && !fi){ toast('Пункттерді жазыңыз немесе PDF тіркеңіз'); return; }
     const btn = f.querySelector('[type=submit]'); btn.disabled = true;
     let file = null;
-    if (fi){ try { const path = `${S.subject}/${Date.now()}-${safeName(fi.name)}`; const up = await sb.storage.from('materials').upload(path, fi, { contentType: fi.type || undefined }); if (up.error) throw up.error; file = { path, name:fi.name }; } catch { toast('Файл жүктелмеді'); btn.disabled = false; return; } }
+    if (fi){ try { file = await upMat(`${S.subject}/${Date.now()}-${safeName(fi.name)}`, fi, btn); } catch (err){ console.warn(err); toast(err.message, 9000); btn.disabled = false; return; } }
     await cur(() => q(sb.from('checklists').insert({ subject:S.subject, section:S.tab, title:$('#cTitle').value.trim(), items, file_path:file ? file.path : null, file_name:file ? file.name : null })), 'Чек-лист жарияланды');
     f.reset(); $('#cFileName').textContent = ''; btn.disabled = false; return;
   }
@@ -1222,10 +1843,19 @@ document.addEventListener('submit', async e => {
   }
   if (f.classList.contains('testrun')){
     e.preventDefault();
-    const id = f.dataset.test; const t = S.tests.find(x => x.id === id); if (!t) return;
-    const answers = t.questions.map((q, qi) => qRead(f, q, qi));
+    const id = f.dataset.test;
+    if (id === '__mist'){
+      const list = runQs(id), ck = S.testChecked[id] || {}, d = S.testDraft[id] || {};
+      const ok = list.filter((it, qi) => ck[qi] && qRight(it.q, d[qi])).length;
+      S.mistRun = null; delete S.testDraft[id]; delete S.testChecked[id];
+      renderData(); toast(`Түзетілді: ${ok} сұрақ. Қалғаны тізімде қалды.`); window.scrollTo({ top:0 }); return;
+    }
+    const t = S.tests.find(x => x.id === id); if (!t) return;
+    const ck = S.testChecked[id] || {}, dr = S.testDraft[id] || {};
+    const answers = t.questions.map((q, qi) => ck[qi] ? dr[qi] : qRead(f, q, qi));
+    answers.forEach((a, qi) => { const k = qKind(t.questions[qi]); const answered = k === 'multi' ? (a && a.length) : k === 'match' ? (a && a.some(x => x >= 0)) : a >= 0; if (!ck[qi] && answered) noteMistake({ tid:id, i:qi }, qRight(t.questions[qi], a)); });
     const score = answers.filter((a, qi) => qRight(t.questions[qi], a)).length;
-    S.testOpen = null; delete S.testDraft[id];
+    S.testOpen = null; delete S.testDraft[id]; delete S.testChecked[id];
     await writeMy({ tests: { [id]: { score, total: t.questions.length, answers, at: Date.now() } } });
     toast(`Нәтиже: ${score}/${t.questions.length}`);
   }

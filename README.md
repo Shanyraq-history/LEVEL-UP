@@ -15,3 +15,8 @@ update public.profiles set role = 'curator' where login = 'сіздің_логи
 
 ## Шығару
 Vercel → Add New → Project → осы репозиторийді Import → Deploy. Framework: Other, баптау қажет емес.
+
+## NOVA AI чат
+- Сервер: `api/nova.js` (Vercel function), Google Gemini API (тегін деңгей) + Google іздеуі, zetix.kz.
+- Vercel → Settings → Environment Variables: `GEMINI_API_KEY` (міндетті, aistudio.google.com), `GEMINI_MODEL` (әдепкі `gemini-3.8-flash`, табылмаса `gemini-flash-latest`), `NOVA_DAILY_LIMIT` (әдепкі 30).
+- Supabase: `supabase/007_nova_usage.sql` бір рет іске қосылуы керек (күндік лимит).
