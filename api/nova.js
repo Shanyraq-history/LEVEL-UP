@@ -7,6 +7,7 @@ export const config = { maxDuration: 60 };
 const SB_URL = process.env.SUPABASE_URL || 'https://ficyroterazopwcgcmat.supabase.co';
 const SB_KEY = process.env.SUPABASE_ANON_KEY || 'sb_publishable_YrTjjteuFy5kMQWy7LLvZA_AdCnipBe';
 const MODEL = process.env.NOVA_MODEL || 'gemini-2.5-flash';
+const GKEY = String(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '').trim();
 const LIMIT = Math.max(1, parseInt(process.env.NOVA_DAILY_LIMIT || '30', 10) || 30);
 
 const SYSTEM = `Сен — NOVA, LEVEL UP оқу платформасының мейірімді робот-көмекшісісің. Оқушылар ҰБТ-ға (140 балл мақсаты) дайындалып жатыр: Информатика, Математика, Математикалық сауаттылық, Қазақстан тарихы.
@@ -44,8 +45,9 @@ function cleanMessages(raw) {
 }
 
 export default async function handler(req, res) {
+  if (req.method === 'GET') return res.status(200).json({ nova: 'ok', key: GKEY ? 'бар' : 'ЖОҚ', model: MODEL, env: process.env.VERCEL_ENV || '', commit: String(process.env.VERCEL_GIT_COMMIT_SHA || '').slice(0, 7) });
   if (req.method !== 'POST') return res.status(405).json({ error: 'method' });
-  if (!process.env.GEMINI_API_KEY) return res.status(503).json({ error: 'not_configured', text: 'NOVA-ның «миы» әлі қосылмаған. Куратор баптауды аяқтаған соң сөйлесе аламыз 🙂' });
+  if (!GKEY) return res.status(503).json({ error: 'not_configured', text: 'NOVA-ның «миы» әлі қосылмаған. Куратор баптауды аяқтаған соң сөйлесе аламыз 🙂' });
 
   const token = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
   if (!token) return res.status(401).json({ error: 'auth', text: 'NOVA-мен сөйлесу үшін сайтқа кір.' });
@@ -70,7 +72,7 @@ export default async function handler(req, res) {
   const contents = messages.map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] }));
   const call = withSearch => fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(MODEL)}:generateContent`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': process.env.GEMINI_API_KEY },
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GKEY },
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: sys }] },
       contents,
