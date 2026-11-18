@@ -18,5 +18,5 @@ Vercel → Add New → Project → осы репозиторийді Import → 
 
 ## NOVA AI чат
 - Сервер: `api/nova.js` (Vercel function), Google Gemini API (тегін деңгей) + Google іздеуі, zetix.kz.
-- Vercel → Settings → Environment Variables: `GEMINI_API_KEY` (міндетті, aistudio.google.com), `NOVA_MODEL` (әдепкі `gemini-2.5-flash`), `NOVA_DAILY_LIMIT` (әдепкі 30).
+- Vercel → Settings → Environment Variables: `GEMINI_API_KEY` (міндетті, aistudio.google.com), `GEMINI_MODEL` (әдепкі `gemini-3.8-flash`, табылмаса `gemini-flash-latest`), `NOVA_DAILY_LIMIT` (әдепкі 30).
 - Supabase: `supabase/007_nova_usage.sql` бір рет іске қосылуы керек (күндік лимит).

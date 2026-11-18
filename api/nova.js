@@ -1,12 +1,14 @@
 // NOVA: LEVEL UP AI көмекшісі (Vercel serverless function, Google Gemini API).
 // Кілттер тек Vercel → Settings → Environment Variables ішінде сақталады:
-//   GEMINI_API_KEY (міндетті), NOVA_MODEL (міндетті емес, әдепкі gemini-2.5-flash), NOVA_DAILY_LIMIT (әдепкі 30).
+//   GEMINI_API_KEY (міндетті), GEMINI_MODEL (міндетті емес, әдепкі gemini-3.8-flash; табылмаса gemini-flash-latest), NOVA_DAILY_LIMIT (әдепкі 30).
 
 export const config = { maxDuration: 60 };
 
 const SB_URL = process.env.SUPABASE_URL || 'https://ficyroterazopwcgcmat.supabase.co';
 const SB_KEY = process.env.SUPABASE_ANON_KEY || 'sb_publishable_YrTjjteuFy5kMQWy7LLvZA_AdCnipBe';
-const MODEL = process.env.NOVA_MODEL || 'gemini-2.5-flash';
+const MODELS = [...new Set([process.env.GEMINI_MODEL, process.env.NOVA_MODEL, 'gemini-3.8-flash', 'gemini-flash-latest'].map(x => String(x || '').trim()).filter(Boolean))];
+const MODEL = MODELS[0];
+let liveModel = MODEL;
 const GKEY = String(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '').trim();
 const LIMIT = Math.max(1, parseInt(process.env.NOVA_DAILY_LIMIT || '30', 10) || 30);
 
@@ -45,7 +47,7 @@ function cleanMessages(raw) {
 }
 
 export default async function handler(req, res) {
-  if (req.method === 'GET') return res.status(200).json({ nova: 'ok', key: GKEY ? 'бар' : 'ЖОҚ', model: MODEL, env: process.env.VERCEL_ENV || '', commit: String(process.env.VERCEL_GIT_COMMIT_SHA || '').slice(0, 7) });
+  if (req.method === 'GET') return res.status(200).json({ nova: 'ok', key: GKEY ? 'бар' : 'ЖОҚ', model: liveModel, env: process.env.VERCEL_ENV || '', commit: String(process.env.VERCEL_GIT_COMMIT_SHA || '').slice(0, 7) });
   if (req.method !== 'POST') return res.status(405).json({ error: 'method' });
   if (!GKEY) return res.status(503).json({ error: 'not_configured', text: 'NOVA-ның «миы» әлі қосылмаған. Куратор баптауды аяқтаған соң сөйлесе аламыз 🙂' });
 
@@ -70,7 +72,7 @@ export default async function handler(req, res) {
   const name = String(profile.full_name || '').trim();
   const sys = SYSTEM + (name ? `\n\nСөйлесіп отырған адамның аты: ${name}.${profile.role === 'curator' ? ' Бұл — куратор.' : ''}` : '');
   const contents = messages.map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] }));
-  const call = withSearch => fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(MODEL)}:generateContent`, {
+  const call = (withSearch, model = liveModel) => fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GKEY },
     body: JSON.stringify({
@@ -84,6 +86,9 @@ export default async function handler(req, res) {
   try {
     const errOf = async resp => { let m = ''; try { const j = await resp.json(); m = (j.error && (j.error.status + ': ' + j.error.message)) || ''; } catch {} return m.slice(0, 220); };
     let r = await call(true), err1 = '';
+    if (r.status === 404){ // модель ескірсе, келесісін байқап көреді
+      for (const m of MODELS.filter(x => x !== liveModel)){ const r2 = await call(true, m); if (r2.status !== 404){ liveModel = m; r = r2; break; } }
+    }
     if (r.status === 400){ err1 = await errOf(r); if (!/api key/i.test(err1)) r = await call(false); } // іздеу қолжетімсіз болса, іздеусіз жауап береді
     if (r.status === 429) return res.status(429).json({ error: 'busy', text: 'Қазір сұрақ көп (тегін лимит). Бір минуттан соң қайта жазшы.' });
     if (!r.ok){
