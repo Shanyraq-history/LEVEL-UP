@@ -381,7 +381,18 @@ body{background:radial-gradient(circle at 82% 2%,var(--halo) 0%,transparent 25%)
   --hero-ink:#FFFFFF; --hero-sub:color-mix(in srgb,var(--sc) 12%,#E3E8EA); --circle:color-mix(in srgb,var(--sc) 70%,#FFFFFF);
   --t1:color-mix(in srgb,var(--sc) 45%,var(--d1)); --t2:color-mix(in srgb,var(--sc) 35%,var(--d1));
 }
-:root[data-subj]:not([data-subj=""]) body{background:radial-gradient(circle at 88% 0%,color-mix(in srgb,var(--sc) 45%,transparent) 0%,transparent 45%),linear-gradient(160deg,color-mix(in srgb,var(--sc) 20%,var(--bg)) 0%,var(--bg) 50%,color-mix(in srgb,var(--sc) 14%,var(--bg)) 100%);background-attachment:fixed}
+:root[data-subj]:not([data-subj=""]){--g1:color-mix(in srgb,var(--sc) 18%,#FFFFFF); --g2:color-mix(in srgb,var(--sc) 45%,#FFFFFF); --g3:color-mix(in srgb,var(--sc) 80%,#FFFFFF); --g4:var(--sc); --gbase:color-mix(in srgb,var(--sc) 14%,#FFFFFF); --ga:38%}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"])[data-subj]:not([data-subj=""]){--g1:color-mix(in srgb,var(--sc) 55%,#FFFFFF); --g2:color-mix(in srgb,var(--sc) 80%,#FFFFFF); --g3:var(--sc); --g4:color-mix(in srgb,var(--sc) 70%,#000000); --gbase:color-mix(in srgb,var(--sc) 55%,var(--d0)); --ga:70%}}
+:root[data-theme="dark"][data-subj]:not([data-subj=""]){--g1:color-mix(in srgb,var(--sc) 55%,#FFFFFF); --g2:color-mix(in srgb,var(--sc) 80%,#FFFFFF); --g3:var(--sc); --g4:color-mix(in srgb,var(--sc) 70%,#000000); --gbase:color-mix(in srgb,var(--sc) 55%,var(--d0)); --ga:70%}
+/* soft glossy multi-tone background: a few blobs of neighbouring shades of the subject colour */
+:root[data-subj]:not([data-subj=""]) body{background:
+  radial-gradient(38% 32% at 12% 88%,color-mix(in srgb,var(--g1) 85%,transparent) 0%,transparent 70%),
+  radial-gradient(30% 26% at 92% 92%,color-mix(in srgb,var(--g1) 75%,transparent) 0%,transparent 70%),
+  radial-gradient(42% 36% at 86% 10%,color-mix(in srgb,var(--g2) 80%,transparent) 0%,transparent 72%),
+  radial-gradient(55% 50% at 30% 28%,color-mix(in srgb,var(--g3) var(--ga),transparent) 0%,transparent 72%),
+  radial-gradient(60% 55% at 68% 62%,color-mix(in srgb,var(--g4) var(--ga),transparent) 0%,transparent 75%),
+  linear-gradient(135deg,color-mix(in srgb,var(--g2) 40%,var(--gbase)) 0%,var(--gbase) 50%,color-mix(in srgb,var(--g4) 25%,var(--gbase)) 100%);
+  background-attachment:fixed}
 /* glossy subject accents */
 html[data-subj]:not([data-subj=""]) .top .btn,html[data-subj]:not([data-subj=""]) .btn.primary,html[data-subj]:not([data-subj=""]) .side a.subj-on,html[data-subj]:not([data-subj=""]) .side > a[aria-current="page"]{background:linear-gradient(180deg,color-mix(in srgb,var(--sc) 62%,#FFFFFF) 0%,var(--sc) 52%,color-mix(in srgb,var(--sc) 80%,#000000) 100%);border-color:transparent;color:#FFFFFF;box-shadow:inset 0 1px 0 rgba(255,255,255,.45),inset 0 -1px 0 rgba(0,0,0,.18),0 6px 18px color-mix(in srgb,var(--sc) 38%,transparent)}
 html[data-subj]:not([data-subj=""]) .top .btn:hover,html[data-subj]:not([data-subj=""]) .btn.primary:hover{color:#FFFFFF;border-color:transparent;filter:brightness(1.08) saturate(1.05)}
