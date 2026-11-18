@@ -94,6 +94,8 @@ main{min-width:0;display:flex;flex-direction:column;gap:20px}
 /* cards & forms */
 .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;box-shadow:var(--shadow);min-width:0}
 .composer{display:grid;gap:12px;border-style:dashed;box-shadow:none;background:transparent}
+.atts{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.atts .btn{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .composer .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
 label.f{display:flex;flex-direction:column;gap:5px;font-size:.82rem;font-weight:500;color:var(--muted)}
 .f input,.f textarea,.f select,input.t{padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);width:100%;font-size:.95rem}
@@ -350,6 +352,13 @@ function fmtDate(s){ const d = parseD(s); return `${d.getDate()} ${MONTHS[d.getM
 function fmtTime(ms){ const d = new Date(ms); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; }
 function fmtDT(ms){ const d = new Date(ms); return `${d.getDate()} ${MONTHS[d.getMonth()]}, ${fmtTime(ms)}`; }
 function endOf(s){ const d = parseD(s); d.setHours(23,59,59,999); return d.getTime(); }
+function dueOf(t){ return t && t.deadline ? t.deadline : endOf(t.date); }
+function dueText(t){ const d = dueOf(t); return ymd(new Date(d)) === t.date ? fmtTime(d) : fmtDT(d); }
+function attHtml(t){
+  const a = t.attachments || []; if (!a.length) return '';
+  return `<div class="atts">${a.map(x => x.url ? `<a class="btn sm" href="${esc(x.url)}" target="_blank" rel="noopener">🔗 ${esc(x.name || x.url.replace(/^https?:\/\//, '').slice(0, 40))}</a>` : `<a class="btn sm" href="${esc(fileUrl('materials', x.path))}" target="_blank" rel="noopener">📄 ${esc(x.name || 'файл')}</a>`).join('')}</div>`;
+}
+const safeUrl = u => { u = u.trim(); if (!u) return ''; if (!/^https?:\/\//i.test(u)) u = 'https://' + u; try { return new URL(u).href; } catch { return ''; } };
 function shiftDate(s, n){ const d = parseD(s); d.setDate(d.getDate()+n); return ymd(d); }
 const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
 const firstName = n => String(n || '').trim().split(/\s+/)[0] || '';
@@ -483,6 +492,7 @@ async function cur(fn, okMsg){
 }
 async function dbDelete(col, id){
   const table = col === 'drafts' ? 'tasks' : col;
+  if (table === 'tasks'){ const t = [...S.tasks, ...S.drafts].find(x => x.id === id); const ps = ((t && t.attachments) || []).filter(a => a.path).map(a => a.path); if (ps.length){ try { await sb.storage.from('materials').remove(ps); } catch {} } }
   if (table === 'materials' || table === 'checklists'){ const m = (table === 'materials' ? S.materials : S.checklists).find(x => x.id === id); if (m && m.file){ try { await sb.storage.from('materials').remove([m.file.path]); } catch {} } }
   return q(sb.from(table).delete().eq('id', id));
 }
@@ -492,7 +502,7 @@ async function loadAll(){
   if (Date.now() - S.urlsAt > 3 * 3600e3){ S.urls = {}; S.urlsAt = Date.now(); }
   const [subs, tasks, mats, cls, tests] = await Promise.all(['subjects','tasks','materials','checklists','tests'].map(t => q(sb.from(t).select('*'))));
   S.subjects = subs.map(x => ({ id:x.id, name:x.name, order:x.ord, sections: Array.isArray(x.sections) ? x.sections : null, createdAt:msOf(x.created_at) }));
-  const tk = tasks.map(t => ({ id:t.id, title:t.title, desc:t.descr, subject:t.subject || '', section:t.section, date:t.date, published:t.published, publishedAt:msOf(t.published_at), createdAt:msOf(t.created_at) }));
+  const tk = tasks.map(t => ({ id:t.id, title:t.title, desc:t.descr, subject:t.subject || '', section:t.section, date:t.date, published:t.published, publishedAt:msOf(t.published_at), deadline:msOf(t.deadline), attachments:Array.isArray(t.attachments) ? t.attachments : [], createdAt:msOf(t.created_at) }));
   S.tasks = tk.filter(t => t.published); S.drafts = tk.filter(t => !t.published);
   S.materials = mats.map(m => ({ id:m.id, subject:m.subject, section:m.section, title:m.title, desc:m.descr, link:m.link, file: m.file_path ? { path:m.file_path, name:m.file_name } : null, createdAt:msOf(m.created_at) }));
   S.checklists = cls.map(c => ({ id:c.id, subject:c.subject, section:c.section || '', title:c.title, items:c.items || [], file: c.file_path ? { path:c.file_path, name:c.file_name } : null, createdAt:msOf(c.created_at) }));
@@ -514,6 +524,7 @@ async function signUrls(){
   if (S.role === 'curator') Object.values(S.progress).forEach(addP);
   addP(S.my);
   [...S.materials, ...S.checklists].forEach(m => { if (m.file && !S.urls['m:' + m.file.path]) need.materials.add(m.file.path); });
+  [...S.tasks, ...S.drafts].forEach(t => (t.attachments || []).forEach(a => { if (a.path && !S.urls['m:' + a.path]) need.materials.add(a.path); }));
   for (const bk of ['proofs', 'materials']){
     const paths = [...need[bk]]; if (!paths.length) continue;
     try {
@@ -694,7 +705,7 @@ function renderShell(){
   }
 
   if (v === 'plan'){
-    html += `<section class="vhead"><div><p class="eyebrow">Күндік жоспар</p><h1 id="planTitle">${esc(fmtDate(S.date))}</h1><p class="lead">Куратор жариялаған тапсырмаларды кеш соңына (23:59) дейін орындап, белгі қойып, дәлел жүкте.</p></div>
+    html += `<section class="vhead"><div><p class="eyebrow">Күндік жоспар</p><h1 id="planTitle">${esc(fmtDate(S.date))}</h1><p class="lead">Куратор жариялаған тапсырмаларды дедлайнға дейін орындап, белгі қойып, дәлел жүкте.</p></div>
       <div class="datectl"><button class="btn sm" data-act="day" data-d="-1" aria-label="Алдыңғы күн">‹</button><input type="date" id="planDate" value="${S.date}" aria-label="Күнді таңдау"><button class="btn sm" data-act="day" data-d="1" aria-label="Келесі күн">›</button><button class="btn sm ghost" data-act="today">Бүгін</button></div></section>`;
     if (r === 'curator'){
       html += `<form class="card composer" id="taskForm">
@@ -703,6 +714,10 @@ function renderShell(){
         <label class="f">Түсіндірме (міндетті емес)<textarea id="tDesc" maxlength="1200" placeholder="Не істеу керек, қандай дәлел жүктеу керек"></textarea></label>
         <div class="row"><label class="f">Пән<select id="tSubj"><option value="">Таңдалмаған</option>${subjects().map(s=>`<option value="${esc(s.id)}">${esc(s.name)}</option>`).join('')}</select></label>
         <label class="f">Бөлім<select id="tSec"><option value="">Таңдалмаған</option></select></label></div>
+        <div class="row"><label class="f">Дедлайн күні<input type="date" id="tDlDate" value="${S.date}"></label>
+        <label class="f">Дедлайн уақыты<input type="time" id="tDlTime" value="23:59"></label></div>
+        <label class="f">Сілтемелер (міндетті емес, әр жолға біреу)<textarea id="tLinks" rows="2" maxlength="2000" placeholder="https://..."></textarea></label>
+        <div class="actions"><label class="btn upload">PDF / файл тіркеу<input type="file" id="tFiles" multiple accept=".pdf,application/pdf,image/*,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip,.txt,.py"></label><span id="tFilesName" class="muted" style="font-size:.85rem"></span></div>
         <div class="actions"><button class="btn primary" type="submit" data-mode="publish">Жариялау</button><button class="btn" type="submit" data-mode="draft">Жоба ретінде сақтау</button><span class="muted" style="font-size:.82rem">Жарияланған тапсырманы барлық оқушы бірден көреді.</span></div>
       </form><div id="draftList" class="list"></div>`;
     } else html += `<div id="deadline"></div>`;
@@ -763,10 +778,10 @@ function proofHtml(p, removable, tid){
 }
 function statusChip(tp, task){
   if (tp && tp.done){
-    const late = tp.doneAt && tp.doneAt > endOf(task.date);
+    const late = tp.doneAt && tp.doneAt > dueOf(task);
     return late ? `<span class="chip warn">Кешігіп орындалды · ${fmtTime(tp.doneAt)}</span>` : `<span class="chip ok">Орындалды${tp.doneAt ? ' · ' + fmtTime(tp.doneAt) : ''}</span>`;
   }
-  if (Date.now() > endOf(task.date)) return `<span class="chip bad">Орындалмады</span>`;
+  if (Date.now() > dueOf(task)) return `<span class="chip bad">Орындалмады</span>`;
   return `<span class="chip">Күтілуде</span>`;
 }
 function taskTags(t){
@@ -805,7 +820,7 @@ function renderPlanStudent(){
   if (dl){
     if (tasks.length){
       dl.innerHTML = `<div class="banner"><div class="big num">${done}/${tasks.length}</div><div class="grow"><b>${done === tasks.length ? 'Барлығы орындалды. Жарайсың!' : 'тапсырма орындалды'}</b><span class="muted" id="countdown">${countdownText()}</span><div class="bar" style="margin-top:6px"><i style="width:${pct(done,tasks.length)}%"></i></div></div></div>`;
-      if (S.date > today()) $('#countdown').textContent = 'Бұл күннің тапсырмалары алдын ала жарияланған.';
+      if (S.date > today() && !$('#countdown').textContent) $('#countdown').textContent = 'Бұл күннің тапсырмалары алдын ала жарияланған.';
     } else dl.innerHTML = '';
   }
   if (!tasks.length){ list.innerHTML = emptyBox(S.role === 'guest' || S.role === 'loading' ? 'Тапсырмалар кіргеннен кейін осында шығады.' : 'Куратор бұл күнге әлі тапсырма жарияламады. Кейінірек қайта кір.'); return; }
@@ -817,8 +832,8 @@ function renderPlanStudent(){
       <input type="checkbox" class="tick" data-act="tick" data-t="${esc(t.id)}" ${tp.done ? 'checked' : ''} aria-label="Орындалды деп белгілеу">
       <div class="tbody">
         <div class="thead"><h3>${esc(t.title)}</h3>${statusChip(tp, t)}</div>
-        ${t.desc ? `<p class="tdesc">${esc(t.desc)}</p>` : ''}
-        <div class="meta">${taskTags(t)}<span>Мерзімі: ${esc(fmtDate(t.date))}, 23:59</span></div>
+        ${t.desc ? `<p class="tdesc">${esc(t.desc)}</p>` : ''}${attHtml(t)}
+        <div class="meta">${taskTags(t)}<span>Дедлайн: ${esc(dueText(t))}</span></div>
         <div class="proofs">${proofs.map(p => proofHtml(p, !RO(), t.id)).join('')}
           <label class="btn sm upload">${up ? 'Жүктелуде…' : (proofs.length ? '+ Тағы дәлел' : 'Дәлел жүктеу')}<input type="file" data-act="proof" data-t="${esc(t.id)}" accept="image/*,application/pdf,.doc,.docx,.ppt,.pptx,.zip,.py,.txt" ${up ? 'disabled' : ''}></label>
           ${tp.done && !proofs.length ? '<span class="chip warn">Дәлел әлі жүктелмеді</span>' : ''}
@@ -827,23 +842,26 @@ function renderPlanStudent(){
   }).join('');
 }
 function countdownText(){
-  if (S.date !== today()) return S.date < today() ? 'Бұл күннің мерзімі өтіп кетті.' : '';
-  const ms = endOf(S.date) - Date.now();
+  const m = MY(), now = Date.now();
+  const left = pubTasks(S.date).filter(t => !m.tasks?.[t.id]?.done && dueOf(t) > now).sort((a, b) => dueOf(a) - dueOf(b));
+  if (!left.length) return S.date < today() ? 'Бұл күннің мерзімі өтіп кетті.' : '';
+  const t = left[0], ms = dueOf(t) - now;
   const h = Math.floor(ms / 3600000), mi = Math.floor(ms % 3600000 / 60000);
-  return `Кеш соңына дейін (23:59) ${h} сағ ${mi} мин қалды`;
+  return `Жақын дедлайн (${dueText(t)}): ${h} сағ ${mi} мин қалды`;
 }
-setInterval(() => { const c = $('#countdown'); if (c && S.date === today()) c.textContent = countdownText(); }, 30000);
+setInterval(() => { const c = $('#countdown'); if (c && S.date <= today()) c.textContent = countdownText(); }, 30000);
 
 function renderPlanCurator(){
   const fd = $('#formDate'); if (fd) fd.textContent = fmtDate(S.date);
+  const ddl = $('#tDlDate'); if (ddl && ddl.dataset.d !== S.date){ ddl.value = S.date; ddl.dataset.d = S.date; }
   const sel = $('#tSubj');
   if (sel && sel.options.length - 1 !== S.subjects.length){ const v = sel.value; sel.innerHTML = `<option value="">Таңдалмаған</option>${subjects().map(s=>`<option value="${esc(s.id)}">${esc(s.name)}</option>`).join('')}`; sel.value = v; }
   const dl = $('#draftList');
   const drafts = S.drafts.filter(d => d.date === S.date);
   if (dl) dl.innerHTML = drafts.length ? `<p class="eyebrow">Жобалар · оқушылар көрмейді</p>` + drafts.map(d => `<article class="card">
       <div class="thead"><h3>${esc(d.title)}</h3><span class="chip">Жоба</span></div>
-      ${d.desc ? `<p class="tdesc" style="margin-top:6px">${esc(d.desc)}</p>` : ''}
-      <div class="meta" style="margin-top:6px">${taskTags(d)}</div>
+      ${d.desc ? `<p class="tdesc" style="margin-top:6px">${esc(d.desc)}</p>` : ''}${attHtml(d)}
+      <div class="meta" style="margin-top:6px">${taskTags(d)}<span>Дедлайн: ${esc(dueText(d))}</span></div>
       <div class="actions" style="margin-top:10px"><button class="btn primary sm" data-act="publish-draft" data-id="${esc(d.id)}">Жариялау</button><button class="btn sm danger" data-act="del" data-col="drafts" data-id="${esc(d.id)}">Өшіру</button></div></article>`).join('') : '';
   const list = $('#taskList'); if (!list) return;
   const tasks = pubTasks(S.date), studs = studentList();
@@ -854,8 +872,8 @@ function renderPlanCurator(){
     const withProof = rows.filter(x => x.tp?.proofs?.length).length;
     const open = S.openTasks[t.id];
     return `<article class="card"><div class="tbody">
-      <div class="thead"><h3>${esc(t.title)}</h3><span class="meta">${taskTags(t)}<span>Жарияланды ${t.publishedAt ? fmtTime(t.publishedAt) : ''}</span></span></div>
-      ${t.desc ? `<p class="tdesc">${esc(t.desc)}</p>` : ''}
+      <div class="thead"><h3>${esc(t.title)}</h3><span class="meta">${taskTags(t)}<span>Дедлайн: ${esc(dueText(t))}</span></span></div>
+      ${t.desc ? `<p class="tdesc">${esc(t.desc)}</p>` : ''}${attHtml(t)}
       <div class="mini"><div class="bar" style="flex:1;width:auto"><i style="width:${pct(done, studs.length)}%"></i></div><span class="num">${done}/${studs.length}</span><span class="muted" style="font-size:.82rem">орындады · ${withProof} дәлел</span></div>
       <div class="actions"><button class="btn sm" data-act="toggle-task" data-id="${esc(t.id)}">${open ? 'Жасыру' : 'Оқушылар бойынша'}</button><button class="btn sm ghost danger" data-act="del" data-col="tasks" data-id="${esc(t.id)}">Өшіру</button></div>
       ${open ? `<div class="who">${rows.length ? rows.map(({s, tp}) => `<div class="who-row"><b>${esc(s.name)} <span class="muted" style="font-weight:400">${esc(s.group || '')}</span></b>${statusChip(tp, t)}${tp?.proofs?.length ? `<div class="proofs">${tp.proofs.map(p => proofHtml(p, false)).join('')}</div>` : ''}</div>`).join('') : '<p class="muted">Әзірге тіркелген оқушы жоқ.</p>'}</div>` : ''}
@@ -1180,6 +1198,7 @@ function syncDate(){
 document.addEventListener('change', async e => {
   const t = e.target;
   if (t.id === 'planDate'){ if (t.value){ S.date = t.value; syncDate(); } return; }
+  if (t.id === 'tFiles'){ $('#tFilesName').textContent = [...t.files].map(x => x.name).join(', '); return; }
   if (t.id === 'mFile'){ $('#mFileName').textContent = t.files[0] ? t.files[0].name : ''; return; }
   if (t.id === 'cFile'){ $('#cFileName').textContent = t.files[0] ? t.files[0].name : ''; return; }
   if (t.id === 'tSubj'){ fillSecSelect(); return; }
@@ -1266,10 +1285,21 @@ document.addEventListener('submit', async e => {
     const mode = e.submitter?.dataset.mode || 'publish';
     const title = $('#tTitle').value.trim(); if (!title) return;
     const data = { title, desc: $('#tDesc').value.trim(), subject: $('#tSubj').value, section: $('#tSec').value, date: S.date, createdAt: Date.now() };
-    const row = { title:data.title, descr:data.desc, subject:data.subject || null, section:data.section, date:data.date };
+    const dd = $('#tDlDate').value || S.date, dt = $('#tDlTime').value || '23:59';
+    const dl = new Date(`${dd}T${dt}`);
+    if (isNaN(dl)) return toast('Дедлайн дұрыс емес');
+    const links = $('#tLinks').value.split(/\n+/).map(safeUrl).filter(Boolean).map(url => ({ url }));
+    const btns = f.querySelectorAll('[type=submit]'); btns.forEach(b => b.disabled = true);
+    const files = [];
+    for (const fi of $('#tFiles').files){
+      try { const path = `tasks/${Date.now()}-${safeName(fi.name)}`; const up = await sb.storage.from('materials').upload(path, fi, { contentType: fi.type || undefined }); if (up.error) throw up.error; files.push({ path, name:fi.name }); }
+      catch (err){ console.warn(err); toast('Файл жүктелмеді: ' + fi.name); }
+    }
+    btns.forEach(b => b.disabled = false);
+    const row = { title:data.title, descr:data.desc, subject:data.subject || null, section:data.section, date:data.date, deadline:dl.toISOString(), attachments:[...links, ...files] };
     if (mode === 'publish') await cur(() => q(sb.from('tasks').insert({ ...row, published:true, published_at:new Date().toISOString() })), 'Жарияланды: оқушылар көре алады');
     else await cur(() => q(sb.from('tasks').insert({ ...row, published:false })), 'Жоба сақталды');
-    f.reset(); return;
+    f.reset(); $('#tDlDate').value = S.date; $('#tFilesName').textContent = ''; return;
   }
   if (f.id === 'matForm'){
     e.preventDefault();
