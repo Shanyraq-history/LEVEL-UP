@@ -504,6 +504,27 @@ th{font-family:var(--f-body);font-weight:700;color:var(--soft)}
 .ring.brk{background:conic-gradient(var(--warn) 0 var(--p),var(--surface-2) var(--p) 100%)}
 .fset{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;margin-top:14px;border-top:1px solid var(--line);padding-top:12px}
 .fset .f input{padding:7px 9px}
+.stat.rank{font:inherit;color:inherit;text-align:left;cursor:pointer;transition:transform .15s,box-shadow .15s}
+.stat.rank:hover{transform:translateY(-2px);box-shadow:0 14px 26px rgba(23,64,78,.12)}
+.stat.rank.top1{background:linear-gradient(135deg,var(--surface),var(--warn-bg));border-color:color-mix(in srgb,var(--warn) 40%,var(--line))}
+.stat.rank.top1 .si{background:var(--warn-bg);color:var(--warn)}
+.rankbox .lb{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
+.lb li{display:grid;grid-template-columns:32px minmax(0,1fr) auto 48px;gap:10px;align-items:center;padding:8px 10px;border-radius:12px}
+.lb li:nth-child(odd){background:var(--surface-2)}
+.lb li.me{box-shadow:inset 0 0 0 1.5px var(--prog)}
+.lb li.gold .pl{background:var(--warn-bg);color:var(--warn)}
+.lb .pl{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;background:var(--t1);color:var(--accent);font-weight:700;font-size:.8rem}
+.lb .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.lb .nm em{font-style:normal;color:var(--muted);font-weight:400}
+.lb .gp{font-size:.78rem}
+.lb b{text-align:right}
+.si.fl svg{transform-origin:50% 90%}
+.si.fl-0{background:var(--surface-2);color:var(--soft)}
+.si.fl-1 svg{animation:flick 1.6s ease-in-out infinite}
+.si.fl-2{box-shadow:0 0 0 3px color-mix(in srgb,var(--warn) 18%,transparent)} .si.fl-2 svg{width:20px;height:20px;fill:color-mix(in srgb,#F2A33A 35%,transparent);animation:flick 1.2s ease-in-out infinite}
+.si.fl-3{background:linear-gradient(160deg,#FFE3B0,#FFC27A);color:#D2601A;box-shadow:0 0 14px rgba(242,140,40,.45)} .si.fl-3 svg{width:22px;height:22px;fill:rgba(255,170,60,.55);animation:flick .9s ease-in-out infinite}
+.si.fl-4{background:linear-gradient(160deg,#FFD08A,#FF8A3D);color:#B33A0E;box-shadow:0 0 22px rgba(255,120,40,.65);width:40px;height:40px} .si.fl-4 svg{width:25px;height:25px;fill:rgba(255,220,120,.7);animation:flick .7s ease-in-out infinite}
+@keyframes flick{0%,100%{transform:scale(1) rotate(-2deg)}50%{transform:scale(1.12) rotate(2deg)}}
 /* mobile bottom bar */
 .mbar{display:none}
 @media (max-width:1370px){ .layout{grid-template-columns:223px minmax(0,1fr) 264px;gap:16px;padding:18px 18px 60px} .layout.norail{grid-template-columns:223px minmax(0,1fr)} .sidebar{top:18px;height:calc(100vh - 36px)} }
@@ -767,7 +788,13 @@ async function loadAll(){
     if (!pendingWrites) S.my = (rows[0] && rows[0].data) || { tasks:{}, checks:{}, tests:{} };
   }
   await signUrls();
+  await loadRating();
   renderData(); renderGreet();
+}
+async function loadRating(){
+  S.ratingDay = today();
+  try { const { data, error } = await sb.rpc('daily_rating', { d: S.ratingDay }); if (error) throw error; S.rating = data || []; S.ratingOk = true; }
+  catch (e){ console.warn('daily_rating', e); S.rating = []; S.ratingOk = false; }
 }
 async function signUrls(){
   const need = { proofs:new Set(), materials:new Set() };
@@ -909,6 +936,7 @@ const ICONS = {
   plus:'<path d="M12 5v14M5 12h14"/>',
   flame:'<path d="M12 22a7 7 0 0 0 7-7c0-3.5-2.5-6-4-7-1 3-4-1-4-5-4 3-6 7-6 12a7 7 0 0 0 7 7Z"/>',
   check:'<path d="m4 12 5 5L20 6"/>',
+  trophy:'<path d="M7 3h10v7a5 5 0 0 1-10 0V3ZM7 5H4v3a4 4 0 0 0 4 4M17 5h3v3a4 4 0 0 1-4 4M12 15v4M8 21h8"/>',
   chart:'<path d="M3 3v18h18M7 17v-6M12 17V7M17 17V4"/>',
   bot:'<rect x="3" y="7" width="18" height="14" rx="5"/><path d="M12 3v4M9 3h6M8 13h.01M16 13h.01M9 17c1.5 1.3 4.5 1.3 6 0"/>',
   redo:'<path d="M4 12a8 8 0 1 0 2.3-5.6M4 4v4.5h4.5"/><path d="M9.5 12.5l2 2 3.5-4"/>',
@@ -1376,6 +1404,16 @@ function streakDays(){
   }
   return n;
 }
+function myPointsToday(){ const m = MY(); return 10 * pubTasks(today()).filter(t => m.tasks?.[t.id]?.done && m.tasks?.[t.id]?.proofs?.length).length; }
+function rankInfo(){
+  const mine = myPointsToday();
+  let list = (S.ratingDay === today() ? S.rating || [] : []).map(x => ({ ...x, points: x.me ? mine : (x.points || 0) }));
+  if (!list.some(x => x.me) && S.uid && !S.preview) list.push({ name: (S.me && S.me.name) || '', grp: (S.me && S.me.group) || '', points: mine, me: true });
+  list.sort((a, b) => b.points - a.points || String(a.name).localeCompare(String(b.name), 'kk'));
+  list.forEach(x => { x.place = 1 + list.filter(y => y.points > x.points).length; });
+  const me = list.find(x => x.me) || { place: 0, points: mine };
+  return { list, place: me.place, pts: mine, n: list.length };
+}
 function testAvg(p){ const ts = Object.values((p && p.tests) || {}).filter(x => x && x.total); return ts.length ? { avg: Math.round(ts.reduce((a, x) => a + pct(x.score, x.total), 0) / ts.length), n: ts.length } : null; }
 function renderHome(){
   const hero = $('#hero'), st = $('#stats'), sc = $('#subjCards'); if (!hero) return;
@@ -1397,10 +1435,20 @@ function renderHome(){
       + stat('Оқушылар', 'users', 'c1', `${studs.length}`, '<small>тіркелген</small>')
       + stat('Бүгін орындалды', 'chart', 'c3', `${avgDone}%`, `<div class="bar"><i style="width:${avgDone}%"></i></div>`);
   } else {
-    const sk = streakDays(), ta = testAvg(m), mist = Object.keys(m.mistakes || {}).length;
-    st.innerHTML = stat('Қатарынан', 'flame', 'c1', `${sk} <span>күн</span>`, '<small>жоспар толық орындалған күндер</small>')
+    const sk = streakDays(), lv = sk >= 14 ? 4 : sk >= 7 ? 3 : sk >= 3 ? 2 : sk >= 1 ? 1 : 0;
+    const rk = rankInfo();
+    st.innerHTML = stat('Қатарынан', 'flame', `c1 fl fl-${lv}`, `${sk} <span>күн</span>`, `<small>${lv >= 3 ? 'Отың лаулап тұр! 🔥' : 'жоспар толық орындалған күндер'}</small>`)
       + stat('Бүгін', 'check', 'c2', t.length ? `${done}<span>/${t.length}</span>` : '—', `<div class="bar"><i style="width:${pct(done, t.length)}%"></i></div>`)
-      + stat('Тест орташа', 'chart', 'c3', ta ? `${ta.avg}%` : '—', `<small>${ta ? ta.n + ' тест' : 'әлі тест жоқ'}${mist ? ' · ' + mist + ' қате' : ''}</small>`);
+      + `<button type="button" class="stat rank ${rk.place === 1 && rk.pts > 0 ? 'top1' : ''}" data-act="rank" aria-expanded="${!!S.showRank}"><div class="st"><span>Күндік рейтинг</span><span class="si c3">${SI('trophy')}</span></div>
+          <strong>${rk.n ? `${rk.place}<span>-орын / ${rk.n}</span>` : '—'}</strong><small>${rk.pts} балл · тапсырма + дәлел = 10</small></button>`;
+    let lb = $('#rankBox');
+    if (S.showRank){
+      if (!lb){ lb = document.createElement('section'); lb.id = 'rankBox'; lb.className = 'card rankbox'; st.after(lb); }
+      lb.innerHTML = `<div class="thead"><h3>Бүгінгі рейтинг · ${esc(fmtDate(today()))}</h3><button class="btn sm ghost" data-act="rank">Жабу</button></div>
+        <p class="muted" style="font-size:.8rem;margin:4px 0 10px">Әр тапсырмаға белгі қойып, дәлел жүктесең — 10 балл. Балл тең болса, орын да бірдей.</p>
+        ${rk.list.length ? `<ol class="lb">${rk.list.map(x => `<li class="${x.me ? 'me' : ''} ${x.place === 1 && x.points > 0 ? 'gold' : ''}"><span class="pl num">${x.place}</span><span class="nm">${esc(x.name || 'Оқушы')}${x.me ? ' <em>(сен)</em>' : ''}</span><span class="muted gp">${esc(x.grp || '')}</span><b class="num">${x.points}</b></li>`).join('')}</ol>`
+          : `<p class="muted">${S.ratingOk === false ? 'Рейтинг әлі қосылмаған: куратор Supabase-те рейтинг SQL-ін іске қосуы керек.' : 'Әзірге дерек жоқ.'}</p>`}`;
+    } else if (lb) lb.remove();
   }
   if (sc){
     const subs = subjects();
@@ -1524,6 +1572,7 @@ document.addEventListener('click', async e => {
   if (act === 'today'){ S.date = today(); syncDate(); return; }
   if (act === 'goto-day'){ S.date = b.dataset.d; syncDate(); return; }
   if (act === 'jump-tasks'){ const el = ROLE() === 'curator' ? $('#taskForm') : $('#taskList'); if (el) el.scrollIntoView({ behavior:'smooth', block:'start' }); return; }
+  if (act === 'rank'){ S.showRank = !S.showRank; if (S.showRank && S.uid) loadRating().then(renderData).catch(() => {}); renderData(); return; }
   if (act === 'focus'){ toggleFocus(); return; }
   if (act === 'focus-reset'){ resetFocus(); return; }
   if (act === 'focus-edit'){ S.focus.edit = !S.focus.edit; renderRail(); if (S.focus.edit){ const i = $('#fStudy'); if (i) i.focus(); } return; }
