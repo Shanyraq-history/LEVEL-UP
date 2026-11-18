@@ -346,6 +346,18 @@ img{max-width:100%}
   --nav-on:rgba(127,209,184,.14); --nav-ink:#93ABA7; --soft:#6F8C88; --t1:#173F45; --t2:#163E36; --t3:#3A3220;
   --dot:transparent; --shadow:0 14px 42px rgba(0,0,0,.28); color-scheme:dark}
 body{background:radial-gradient(circle at 82% 2%,var(--halo) 0%,transparent 25%),var(--bg);background-attachment:fixed;font-size:14.5px}
+/* per-subject colour theme (Информатика keeps the default) */
+:root[data-subj="hist"]{--sc:#AE2A00}
+:root[data-subj="ms"]{--sc:#00A3B6}
+:root[data-subj="mat"]{--sc:#1B36B0}
+:root[data-subj]:not([data-subj=""]){
+  --accent:color-mix(in srgb,var(--sc) 82%,var(--ink)); --glow:color-mix(in srgb,var(--sc) 60%,var(--surface)); --prog:var(--sc);
+  --nav-on:color-mix(in srgb,var(--sc) 14%,var(--surface)); --halo:color-mix(in srgb,var(--sc) 30%,var(--bg));
+  --hero-a:color-mix(in srgb,var(--sc) 26%,var(--surface)); --hero-b:color-mix(in srgb,var(--sc) 14%,var(--surface)); --hero-c:color-mix(in srgb,var(--sc) 6%,var(--surface));
+  --hero-line:color-mix(in srgb,var(--sc) 24%,var(--surface)); --circle:color-mix(in srgb,var(--sc) 40%,var(--surface));
+  --t1:color-mix(in srgb,var(--sc) 12%,var(--surface)); --t2:color-mix(in srgb,var(--sc) 8%,var(--surface));
+}
+:root[data-subj]:not([data-subj=""]) body{background:radial-gradient(circle at 88% 0%,color-mix(in srgb,var(--sc) 40%,transparent) 0%,transparent 42%),radial-gradient(circle at 0% 100%,color-mix(in srgb,var(--sc) 20%,transparent) 0%,transparent 45%),var(--bg);background-attachment:fixed;transition:background .3s}
 body::before{background:var(--bg)}
 h1{font-weight:700;letter-spacing:-.02em}
 .eyebrow{letter-spacing:.14em;color:var(--soft);font-weight:600}
@@ -1152,6 +1164,8 @@ function renderNav(){
 /* ---------- shell ---------- */
 function renderShell(){
   renderNav();
+  { const n = S.view === 'subject' ? subjName(S.subject).toLowerCase() : '';
+    document.documentElement.dataset.subj = /тарих/.test(n) ? 'hist' : /сауат/.test(n) ? 'ms' : /математика/.test(n) ? 'mat' : ''; }
   const r = ROLE(), v = S.view;
   let html = '';
   if (S.preview) html += `<div class="preview-bar"><span>Сіз сайтты оқушы көзімен көріп тұрсыз. Белгілер сақталмайды.</span><button class="btn sm" data-act="preview-off">Куратор режиміне оралу</button></div>`;
