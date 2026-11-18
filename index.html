@@ -126,6 +126,8 @@ label.f{display:flex;flex-direction:column;gap:5px;font-size:.82rem;font-weight:
 .tag{font-family:var(--f-mono);font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);border:1px solid currentColor;border-radius:6px;padding:1px 6px;text-decoration:none;white-space:nowrap}
 
 /* tasks */
+.ownbox{display:grid}.ownbox>summary{list-style:none;display:inline-flex;cursor:pointer;width:max-content}.ownbox>summary::-webkit-details-marker{display:none}
+.ownbox[open]>summary{margin-bottom:10px}.chip.own{background:color-mix(in srgb,var(--sc,#17404E) 14%,transparent);color:var(--ink)}
 .task{display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:start}
 .task.is-done{border-color:color-mix(in srgb,var(--ok) 45%,var(--line))}
 .tick{appearance:none;width:30px;height:30px;border-radius:9px;border:2px solid var(--line);background:var(--surface);cursor:pointer;display:grid;place-items:center;margin:0;transition:background .15s,border-color .15s}
@@ -848,7 +850,7 @@ const TIPS = {
 /* ---------- state ---------- */
 const S = {
   role:'loading', preview:false, uid:null, db:null, user:null, assets:null, sample:null, myName:'',
-  subjects:[], tasks:[], drafts:[], materials:[], checklists:[], tests:[], students:{}, progress:{},
+  subjects:[], tasks:[], drafts:[], own:[], materials:[], checklists:[], tests:[], students:{}, progress:{},
   me:null, meLoaded:false, my:null, previewMy:{tasks:{},checks:{},tests:{}},
   date: today(), view:'plan', subject:null, tab:'analysis', openStudent:null, openTasks:{}, uploading:{}, testOpen:null, testDraft:{},
   ro:false, addingSubject:false, chat:[],
@@ -858,6 +860,8 @@ const RO = () => S.preview || S.role === 'guest' || S.role === 'loading' || S.ro
 const MY = () => S.preview ? S.previewMy : (S.my || {tasks:{},checks:{},tests:{}});
 const studentList = () => Object.values(S.students).sort((a,b) => (a.name||'').localeCompare(b.name||'', 'kk'));
 const pubTasks = d => S.tasks.filter(t => t.date === d).sort((a,b) => (a.publishedAt||0) - (b.publishedAt||0));
+const ownTasks = (d, uid) => S.own.filter(t => t.date === d && (uid === undefined || t.owner === uid)).sort((a,b) => (a.createdAt||0) - (b.createdAt||0));
+const myDayTasks = d => S.preview ? pubTasks(d) : [...pubTasks(d), ...ownTasks(d, S.uid)];
 const subjects = () => [...S.subjects].sort((a,b) => (a.order||0) - (b.order||0) || (a.createdAt||0) - (b.createdAt||0));
 const subjName = id => (S.subjects.find(s => s.id === id) || {}).name || '';
 const needsReg = () => false;
@@ -933,7 +937,7 @@ async function cur(fn, okMsg){
 }
 async function dbDelete(col, id){
   const table = col === 'drafts' ? 'tasks' : col;
-  if (table === 'tasks'){ const t = [...S.tasks, ...S.drafts].find(x => x.id === id); const ps = ((t && t.attachments) || []).filter(a => a.path).map(a => a.path); if (ps.length){ try { await sb.storage.from('materials').remove(ps); } catch {} } }
+  if (table === 'tasks'){ const t = [...S.tasks, ...S.drafts, ...S.own].find(x => x.id === id); const ps = ((t && t.attachments) || []).filter(a => a.path).map(a => a.path); if (ps.length){ try { await sb.storage.from('materials').remove(ps); } catch {} } }
   if (table === 'materials' || table === 'checklists'){ const m = (table === 'materials' ? S.materials : S.checklists).find(x => x.id === id); if (m && m.file){ try { await sb.storage.from('materials').remove([m.file.path]); } catch {} } }
   return q(sb.from(table).delete().eq('id', id));
 }
@@ -943,8 +947,8 @@ async function loadAll(){
   if (Date.now() - S.urlsAt > 3 * 3600e3){ S.urls = {}; S.urlsAt = Date.now(); }
   const [subs, tasks, mats, cls, tests] = await Promise.all(['subjects','tasks','materials','checklists','tests'].map(t => q(sb.from(t).select('*'))));
   S.subjects = subs.map(x => ({ id:x.id, name:x.name, order:x.ord, sections: Array.isArray(x.sections) ? x.sections : null, createdAt:msOf(x.created_at) }));
-  const tk = tasks.map(t => ({ id:t.id, title:t.title, desc:t.descr, subject:t.subject || '', section:t.section, date:t.date, published:t.published, publishedAt:msOf(t.published_at), deadline:msOf(t.deadline), attachments:Array.isArray(t.attachments) ? t.attachments : [], createdAt:msOf(t.created_at) }));
-  S.tasks = tk.filter(t => t.published); S.drafts = tk.filter(t => !t.published);
+  const tk = tasks.map(t => ({ id:t.id, title:t.title, desc:t.descr, subject:t.subject || '', section:t.section, date:t.date, published:t.published, publishedAt:msOf(t.published_at), deadline:msOf(t.deadline), attachments:Array.isArray(t.attachments) ? t.attachments : [], owner:t.owner || null, createdAt:msOf(t.created_at) }));
+  S.own = tk.filter(t => t.owner); S.tasks = tk.filter(t => t.published && !t.owner); S.drafts = tk.filter(t => !t.published && !t.owner);
   S.materials = mats.map(m => ({ id:m.id, subject:m.subject, section:m.section, title:m.title, desc:m.descr, link:m.link, file: m.file_path ? { path:m.file_path, name:m.file_name } : null, createdAt:msOf(m.created_at) }));
   S.checklists = cls.map(c => ({ id:c.id, subject:c.subject, section:c.section || '', title:c.title, items:c.items || [], file: c.file_path ? { path:c.file_path, name:c.file_name } : null, createdAt:msOf(c.created_at) }));
   S.tests = tests.map(t => ({ id:t.id, subject:t.subject, section:t.section || '', title:t.title, questions:t.questions || [], createdAt:msOf(t.created_at) }));
@@ -971,7 +975,7 @@ async function signUrls(){
   if (S.role === 'curator') Object.values(S.progress).forEach(addP);
   addP(S.my);
   [...S.materials, ...S.checklists].forEach(m => { if (m.file && !S.urls['m:' + m.file.path]) need.materials.add(m.file.path); });
-  [...S.tasks, ...S.drafts].forEach(t => (t.attachments || []).forEach(a => { if (a.path && !S.urls['m:' + a.path]) need.materials.add(a.path); }));
+  [...S.tasks, ...S.drafts, ...S.own].forEach(t => (t.attachments || []).forEach(a => { if (a.path && !S.urls['m:' + a.path]) need.materials.add(a.path); }));
   for (const bk of ['proofs', 'materials']){
     const paths = [...need[bk]]; if (!paths.length) continue;
     try {
@@ -1331,22 +1335,20 @@ function renderShell(){
 
   if (v === 'plan'){
     html += `<section class="hero" id="hero"></section><div class="stats" id="stats"></div>`;
-    html += `<section class="vhead"><div><p class="eyebrow">Күндік жоспар</p><h1 id="planTitle">${esc(fmtDate(S.date))}</h1><p class="lead">Куратор жариялаған тапсырмаларды дедлайнға дейін орындап, белгі қойып, дәлел жүкте.</p></div>
+    html += `<section class="vhead"><div><p class="eyebrow">Күндік жоспар</p><h1 id="planTitle">${esc(fmtDate(S.date))}</h1><p class="lead">${r === 'curator' ? 'Куратор жариялаған тапсырмаларды дедлайнға дейін орындап, белгі қойып, дәлел жүкте.' : 'Куратордың тапсырмалары мен өз тапсырмаларыңды дедлайнға дейін орындап, белгі қойып, дәлел жүкте.'}</p></div>
       <div class="datectl"><button class="btn sm" data-act="day" data-d="-1" aria-label="Алдыңғы күн">‹</button><input type="date" id="planDate" value="${S.date}" aria-label="Күнді таңдау"><button class="btn sm" data-act="day" data-d="1" aria-label="Келесі күн">›</button><button class="btn sm ghost" data-act="today">Бүгін</button></div></section>`;
     if (r === 'curator'){
       html += `<form class="card composer" id="taskForm">
         <h2>Жаңа тапсырма · <span id="formDate">${esc(fmtDate(S.date))}</span></h2>
-        <label class="f">Тапсырма<input id="tTitle" required maxlength="140" placeholder="Мысалы: Математика, 3-нұсқа: 1–10 есептерді шығару"></label>
-        <label class="f">Түсіндірме (міндетті емес)<textarea id="tDesc" maxlength="1200" placeholder="Не істеу керек, қандай дәлел жүктеу керек"></textarea></label>
-        <div class="row"><label class="f">Пән<select id="tSubj"><option value="">Таңдалмаған</option>${subjects().map(s=>`<option value="${esc(s.id)}">${esc(s.name)}</option>`).join('')}</select></label>
-        <label class="f">Бөлім<select id="tSec"><option value="">Таңдалмаған</option></select></label></div>
-        <div class="row"><label class="f">Дедлайн күні<input type="date" id="tDlDate" value="${S.date}"></label>
-        <label class="f">Дедлайн уақыты<input type="time" id="tDlTime" value="23:59"></label></div>
-        <label class="f">Сілтемелер (міндетті емес, әр жолға біреу)<textarea id="tLinks" rows="2" maxlength="2000" placeholder="https://..."></textarea></label>
-        <div class="actions"><label class="btn upload">PDF / файл тіркеу<input type="file" id="tFiles" multiple accept=".pdf,application/pdf,image/*,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip,.txt,.py"></label><span id="tFilesName" class="muted" style="font-size:.85rem"></span></div>
-        <div class="actions"><button class="btn primary" type="submit" data-mode="publish">Жариялау</button><button class="btn" type="submit" data-mode="draft">Жоба ретінде сақтау</button><span class="muted" style="font-size:.82rem">Жарияланған тапсырманы барлық оқушы бірден көреді.</span></div>
+${taskFields()}        <div class="actions"><button class="btn primary" type="submit" data-mode="publish">Жариялау</button><button class="btn" type="submit" data-mode="draft">Жоба ретінде сақтау</button><span class="muted" style="font-size:.82rem">Жарияланған тапсырманы барлық оқушы бірден көреді.</span></div>
       </form><div id="draftList" class="list"></div>`;
-    } else html += `<div id="deadline"></div>`;
+    } else {
+      html += `<div id="deadline"></div>`;
+      if (!RO()) html += `<details class="ownbox" id="ownBox"><summary class="btn sm">+ Өз тапсырмамды қосу</summary><form class="card composer" id="taskForm">
+        <h2>Өз тапсырмам · <span id="formDate">${esc(fmtDate(S.date))}</span></h2>
+${taskFields('Мысалы: Тарих, 5-тақырыпты қайталау')}        <div class="actions"><button class="btn primary" type="submit" data-mode="own">Қосу</button><span class="muted" style="font-size:.82rem">Бұл тапсырманы тек сен және куратор көресіңдер.</span></div>
+      </form></details>`;
+    }
     html += `<div id="taskList" class="list"></div>`;
   } else if (v === 'subject'){
     const tb = curSec(), sid = S.subject;
@@ -1397,6 +1399,17 @@ function renderShell(){
 }
 
 function emptyBox(text){ return `<div class="empty">${bot()}<p>${esc(text)}</p></div>`; }
+function taskFields(ph){
+  return `        <label class="f">Тапсырма<input id="tTitle" required maxlength="140" placeholder="${esc(ph || 'Мысалы: Математика, 3-нұсқа: 1–10 есептерді шығару')}"></label>
+        <label class="f">Түсіндірме (міндетті емес)<textarea id="tDesc" maxlength="1200" placeholder="Не істеу керек, қандай дәлел жүктеу керек"></textarea></label>
+        <div class="row"><label class="f">Пән<select id="tSubj"><option value="">Таңдалмаған</option>${subjects().map(s=>`<option value="${esc(s.id)}">${esc(s.name)}</option>`).join('')}</select></label>
+        <label class="f">Бөлім<select id="tSec"><option value="">Таңдалмаған</option></select></label></div>
+        <div class="row"><label class="f">Дедлайн күні<input type="date" id="tDlDate" value="${S.date}"></label>
+        <label class="f">Дедлайн уақыты<input type="time" id="tDlTime" value="23:59"></label></div>
+        <label class="f">Сілтемелер (міндетті емес, әр жолға біреу)<textarea id="tLinks" rows="2" maxlength="2000" placeholder="https://..."></textarea></label>
+        <div class="actions"><label class="btn upload">PDF / файл тіркеу<input type="file" id="tFiles" multiple accept=".pdf,application/pdf,image/*,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip,.txt,.py"></label><span id="tFilesName" class="muted" style="font-size:.85rem"></span></div>
+`;
+}
 function proofHtml(p, removable, tid){
   const url = fileUrl('proofs', p.path);
   const isImg = (p.type || '').startsWith('image/');
@@ -1442,7 +1455,11 @@ function renderData(){
 
 function renderPlanStudent(){
   const list = $('#taskList'); if (!list) return;
-  const tasks = pubTasks(S.date), m = MY();
+  const fd = $('#formDate'); if (fd) fd.textContent = fmtDate(S.date);
+  const ddl = $('#tDlDate'); if (ddl && ddl.dataset.d !== S.date){ ddl.value = S.date; ddl.dataset.d = S.date; }
+  const sel = $('#tSubj');
+  if (sel && sel.options.length - 1 !== S.subjects.length){ const v = sel.value; sel.innerHTML = `<option value="">Таңдалмаған</option>${subjects().map(s=>`<option value="${esc(s.id)}">${esc(s.name)}</option>`).join('')}`; sel.value = v; }
+  const tasks = myDayTasks(S.date), m = MY();
   const done = tasks.filter(t => m.tasks?.[t.id]?.done).length;
   const dl = $('#deadline');
   if (dl){
@@ -1451,7 +1468,7 @@ function renderPlanStudent(){
       if (S.date > today() && !$('#countdown').textContent) $('#countdown').textContent = 'Бұл күннің тапсырмалары алдын ала жарияланған.';
     } else dl.innerHTML = '';
   }
-  if (!tasks.length){ list.innerHTML = emptyBox(S.role === 'guest' || S.role === 'loading' ? 'Тапсырмалар кіргеннен кейін осында шығады.' : 'Куратор бұл күнге әлі тапсырма жарияламады. Кейінірек қайта кір.'); return; }
+  if (!tasks.length){ list.innerHTML = emptyBox(S.role === 'guest' || S.role === 'loading' ? 'Тапсырмалар кіргеннен кейін осында шығады.' : 'Куратор бұл күнге әлі тапсырма жарияламады. Өзіңе тапсырма қосқың келсе, «+ Өз тапсырмамды қосу» батырмасын бас.'); return; }
   list.innerHTML = tasks.map(t => {
     const tp = m.tasks?.[t.id] || {};
     const proofs = tp.proofs || [];
@@ -1459,9 +1476,9 @@ function renderPlanStudent(){
     return `<article class="card task ${tp.done ? 'is-done' : ''}">
       <input type="checkbox" class="tick" data-act="tick" data-t="${esc(t.id)}" ${tp.done ? 'checked' : ''} aria-label="Орындалды деп белгілеу">
       <div class="tbody">
-        <div class="thead"><h3>${esc(t.title)}</h3>${statusChip(tp, t)}</div>
+        <div class="thead"><h3>${esc(t.title)}</h3>${t.owner ? '<span class="chip own">Өз тапсырмам</span>' : ''}${statusChip(tp, t)}</div>
         ${t.desc ? `<p class="tdesc">${esc(t.desc)}</p>` : ''}${attHtml(t)}
-        <div class="meta">${taskTags(t)}<span>Дедлайн: ${esc(dueText(t))}</span></div>
+        <div class="meta">${taskTags(t)}<span>Дедлайн: ${esc(dueText(t))}</span>${t.owner && !RO() ? `<button class="btn sm ghost danger" data-act="del" data-col="tasks" data-id="${esc(t.id)}">Өшіру</button>` : ''}</div>
         <div class="proofs">${proofs.map(p => proofHtml(p, !RO(), t.id)).join('')}
           <label class="btn sm upload">${up ? 'Жүктелуде…' : (proofs.length ? '+ Тағы дәлел' : 'Дәлел жүктеу')}<input type="file" data-act="proof" data-t="${esc(t.id)}" accept="image/*,application/pdf,.doc,.docx,.ppt,.pptx,.zip,.py,.txt" ${up ? 'disabled' : ''}></label>
           ${tp.done && !proofs.length ? '<span class="chip warn">Дәлел әлі жүктелмеді</span>' : ''}
@@ -1513,7 +1530,17 @@ function renderPlanCurator(){
       <div class="actions" style="margin-top:10px"><button class="btn primary sm" data-act="publish-draft" data-id="${esc(d.id)}">Жариялау</button><button class="btn sm danger" data-act="del" data-col="drafts" data-id="${esc(d.id)}">Өшіру</button></div></article>`).join('') : '';
   const list = $('#taskList'); if (!list) return;
   const tasks = pubTasks(S.date), studs = studentList();
-  if (!tasks.length){ list.innerHTML = `<p class="eyebrow">Жарияланған</p>` + emptyBox('Бұл күнге жарияланған тапсырма жоқ. Жоғарыдағы формадан қосыңыз.'); return; }
+  const own = ownTasks(S.date);
+  const ownHtml = own.length ? `<p class="eyebrow" style="margin-top:18px">Оқушылардың өз тапсырмалары · ${own.length}</p>` + own.map(t => {
+    const s = S.students[t.owner], tp = S.progress[t.owner]?.tasks?.[t.id];
+    return `<article class="card"><div class="tbody">
+      <div class="thead"><h3>${esc(t.title)}</h3><span class="chip own">${esc(s ? s.name : 'Оқушы')}${s && s.group ? ' · ' + esc(s.group) : ''}</span>${statusChip(tp, t)}</div>
+      ${t.desc ? `<p class="tdesc">${esc(t.desc)}</p>` : ''}${attHtml(t)}
+      <div class="meta">${taskTags(t)}<span>Дедлайн: ${esc(dueText(t))}</span><button class="btn sm ghost danger" data-act="del" data-col="tasks" data-id="${esc(t.id)}">Өшіру</button></div>
+      ${tp?.proofs?.length ? `<div class="proofs">${tp.proofs.map(p => proofHtml(p, false)).join('')}</div>` : ''}
+    </div></article>`;
+  }).join('') : '';
+  if (!tasks.length){ list.innerHTML = `<p class="eyebrow">Жарияланған</p>` + emptyBox('Бұл күнге жарияланған тапсырма жоқ. Жоғарыдағы формадан қосыңыз.') + ownHtml; return; }
   list.innerHTML = `<p class="eyebrow">Жарияланған · ${tasks.length}</p>` + tasks.map(t => {
     const rows = studs.map(s => ({ s, tp: S.progress[s.id]?.tasks?.[t.id] }));
     const done = rows.filter(x => x.tp?.done).length;
@@ -1526,7 +1553,7 @@ function renderPlanCurator(){
       <div class="actions"><button class="btn sm" data-act="toggle-task" data-id="${esc(t.id)}">${open ? 'Жасыру' : 'Оқушылар бойынша'}</button><button class="btn sm ghost danger" data-act="del" data-col="tasks" data-id="${esc(t.id)}">Өшіру</button></div>
       ${open ? `<div class="who">${rows.length ? rows.map(({s, tp}) => `<div class="who-row"><b>${esc(s.name)} <span class="muted" style="font-weight:400">${esc(s.group || '')}</span></b>${statusChip(tp, t)}${tp?.proofs?.length ? `<div class="proofs">${tp.proofs.map(p => proofHtml(p, false)).join('')}</div>` : ''}</div>`).join('') : '<p class="muted">Әзірге тіркелген оқушы жоқ.</p>'}</div>` : ''}
     </div></article>`;
-  }).join('');
+  }).join('') + ownHtml;
 }
 
 function renderMaterials(){
@@ -2107,14 +2134,19 @@ document.addEventListener('submit', async e => {
     const dl = new Date(`${dd}T${dt}`);
     if (isNaN(dl)) return toast('Дедлайн дұрыс емес');
     const links = $('#tLinks').value.split(/\n+/).map(safeUrl).filter(Boolean).map(url => ({ url }));
+    if (mode === 'own' && RO()) return toast('Алдын ала қарау режимі: өзгеріс сақталмайды');
     const btns = f.querySelectorAll('[type=submit]'); btns.forEach(b => b.disabled = true);
     const files = [];
     for (const fi of $('#tFiles').files){
-      try { files.push(await upMat(`tasks/${Date.now()}-${safeName(fi.name)}`, fi, btns[btns.length - 1])); }
+      try { files.push(await upMat(`${mode === 'own' ? 'own/' + S.uid : 'tasks'}/${Date.now()}-${safeName(fi.name)}`, fi, btns[btns.length - 1])); }
       catch (err){ console.warn(err); toast(err.message); await new Promise(r => setTimeout(r, 2500)); }
     }
     btns.forEach(b => b.disabled = false);
     const row = { title:data.title, descr:data.desc, subject:data.subject || null, section:data.section, date:data.date, deadline:dl.toISOString(), attachments:[...links, ...files] };
+    if (mode === 'own'){
+      await cur(() => q(sb.from('tasks').insert({ ...row, owner:S.uid, published:true, published_at:new Date().toISOString() })), 'Тапсырмаң қосылды');
+      f.reset(); $('#tDlDate').value = S.date; $('#tFilesName').textContent = ''; const ob = $('#ownBox'); if (ob) ob.open = false; return;
+    }
     if (mode === 'publish') await cur(() => q(sb.from('tasks').insert({ ...row, published:true, published_at:new Date().toISOString() })), 'Жарияланды: оқушылар көре алады');
     else await cur(() => q(sb.from('tasks').insert({ ...row, published:false })), 'Жоба сақталды');
     f.reset(); $('#tDlDate').value = S.date; $('#tFilesName').textContent = ''; return;
