@@ -494,6 +494,12 @@ th{font-family:var(--f-body);font-weight:700;color:var(--soft)}
 .fcopy p{font-size:.74rem;color:var(--muted);line-height:1.5;margin:4px 0 10px}
 .fcopy .btn{background:var(--t1);border:0;color:var(--accent)}
 .fcopy .btn.running{background:var(--ok-bg);color:var(--ok)}
+.fcopy .btn.ghost{background:none;color:var(--muted);padding:5px 8px}
+.fcopy .actions{gap:4px}
+.fpill.brk{background:var(--warn-bg);color:var(--warn)}
+.ring.brk{background:conic-gradient(var(--warn) 0 var(--p),var(--surface-2) var(--p) 100%)}
+.fset{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;margin-top:14px;border-top:1px solid var(--line);padding-top:12px}
+.fset .f input{padding:7px 9px}
 /* mobile bottom bar */
 .mbar{display:none}
 @media (max-width:1370px){ .layout{grid-template-columns:223px minmax(0,1fr) 264px;gap:16px;padding:18px 18px 60px} .layout.norail{grid-template-columns:223px minmax(0,1fr)} .sidebar{top:18px;height:calc(100vh - 36px)} }
@@ -1404,22 +1410,52 @@ function renderHome(){
     }).join('') || emptyBox('Пән әлі қосылмаған.');
   }
 }
-const FOCUS = 25 * 60;
-S.focus = { left: FOCUS, endAt: 0, timer: null };
+function focusCfg(){ let c = {}; try { c = JSON.parse(localStorage.getItem('levelup-focus') || '{}') || {}; } catch {} const ok = n => Number.isFinite(n) && n >= 1 && n <= 180; return { study: ok(+c.study) ? +c.study : 25, brk: ok(+c.brk) ? +c.brk : 5 }; }
+S.focus = { phase:'study', left: focusCfg().study * 60, endAt: 0, timer: null, edit: false };
+const phaseLen = ph => (ph === 'study' ? focusCfg().study : focusCfg().brk) * 60;
 function focusLeft(){ const f = S.focus; return f.endAt ? Math.max(0, Math.round((f.endAt - Date.now()) / 1000)) : f.left; }
+let audioCtx = null;
+function chime(){
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    const t = audioCtx.currentTime;
+    [0, .35, .7].forEach((d, k) => { const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = 'sine'; o.frequency.value = [880, 1046.5, 1318.5][k];
+      g.gain.setValueAtTime(0.0001, t + d); g.gain.exponentialRampToValueAtTime(0.35, t + d + .02); g.gain.exponentialRampToValueAtTime(0.0001, t + d + .5);
+      o.connect(g).connect(audioCtx.destination); o.start(t + d); o.stop(t + d + .55); });
+  } catch {}
+}
 function paintFocus(){
-  const f = S.focus, left = focusLeft(), t = $('#fText'), r = $('#fRing'), b = $('#fBtn');
-  if (f.endAt && left <= 0){ clearInterval(f.timer); f.timer = null; f.endAt = 0; f.left = FOCUS; f.done = true; toast('Фокус сессиясы аяқталды. Сәл демал ☕'); }
-  const l = focusLeft();
+  const f = S.focus;
+  if (f.endAt && focusLeft() <= 0){
+    chime();
+    const next = f.phase === 'study' ? 'break' : 'study';
+    toast(next === 'break' ? `Жарайсың! Енді ${focusCfg().brk} минут демал ☕` : `Демалыс бітті. ${focusCfg().study} минут оқуға кірісейік 📚`);
+    f.phase = next; f.left = phaseLen(next); f.endAt = Date.now() + f.left * 1000;
+  }
+  const l = focusLeft(), tot = phaseLen(f.phase);
+  const t = $('#fText'), r = $('#fRing'), b = $('#fBtn'), ph = $('#fPhase');
   if (t) t.textContent = `${pad(Math.floor(l / 60))}:${pad(l % 60)}`;
-  if (r) r.style.setProperty('--p', (100 * (FOCUS - l) / FOCUS) + '%');
-  if (b){ b.textContent = f.endAt ? 'Ⅱ Үзіліс' : f.done ? '▶ Қайта бастау' : (l === FOCUS ? '▶ Бастау' : '▶ Жалғастыру'); b.classList.toggle('running', !!f.endAt); }
+  if (r){ r.style.setProperty('--p', Math.min(100, 100 * (tot - l) / tot) + '%'); r.classList.toggle('brk', f.phase === 'break'); }
+  if (ph){ ph.textContent = f.phase === 'study' ? 'Оқу' : 'Демалыс'; ph.classList.toggle('brk', f.phase === 'break'); }
+  if (b){ b.textContent = f.endAt ? 'Ⅱ Үзіліс' : (l === tot ? '▶ Бастау' : '▶ Жалғастыру'); b.classList.toggle('running', !!f.endAt); }
 }
 function toggleFocus(){
   const f = S.focus;
+  try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') audioCtx.resume(); } catch {}
   if (f.endAt){ f.left = focusLeft(); f.endAt = 0; clearInterval(f.timer); f.timer = null; }
-  else { f.done = false; f.endAt = Date.now() + f.left * 1000; f.timer = setInterval(paintFocus, 1000); }
+  else { f.endAt = Date.now() + f.left * 1000; f.timer = setInterval(paintFocus, 1000); }
   paintFocus();
+}
+function resetFocus(){ const f = S.focus; clearInterval(f.timer); f.timer = null; f.endAt = 0; f.phase = 'study'; f.left = phaseLen('study'); paintFocus(); }
+function focusHtml(){
+  const c = focusCfg(), f = S.focus;
+  return `<section class="rbox focus"><div class="fhead"><h3>Фокус бұрышы 🍵</h3><span class="fpill" id="fPhase">Оқу</span></div>
+    <div class="fmain"><div class="ring" id="fRing"><div class="ring-in"><strong class="num" id="fText">--:--</strong></div></div>
+    <div class="fcopy"><b>${c.study} мин оқу · ${c.brk} мин демалыс</b><p>Уақыт біткенде дыбыс шығады да, келесі кезең өзі басталады.</p>
+    <div class="actions"><button type="button" class="btn sm" id="fBtn" data-act="focus"></button><button type="button" class="btn sm ghost" data-act="focus-reset" aria-label="Басынан бастау" title="Басынан бастау">↺</button><button type="button" class="btn sm ghost" data-act="focus-edit" aria-label="Минуттарды өзгерту" title="Минуттарды өзгерту">⚙</button></div></div></div>
+    ${f.edit ? `<form class="fset" id="focusForm"><label class="f">Оқу, мин<input type="number" id="fStudy" min="1" max="180" value="${c.study}" required></label><label class="f">Демалыс<input type="number" id="fBrk" min="1" max="180" value="${c.brk}" required></label><button class="btn sm primary">Сақтау</button></form>` : ''}
+  </section>`;
 }
 function renderRail(){
   const rail = $('#rail'), lay = $('#layout'); if (!rail) return;
@@ -1438,9 +1474,7 @@ function renderRail(){
       <div class="week">${WL.map(w => `<span class="wl">${w}</span>`).join('')}${days.map(ds => `<button type="button" data-act="goto-day" data-d="${ds}" class="${ds === S.date ? 'sel' : ''} ${ds === t0 ? 'now' : ''} ${dayDone(ds) ? 'done' : ''}" aria-label="${esc(fmtDate(ds))}">${+ds.slice(8)}</button>`).join('')}</div>
       ${up ? `<div class="upc"><span class="ui">📝</span><div><b>${esc(up.title)}</b><small>Дедлайн: ${esc(ymd(new Date(dueOf(up))) === t0 ? 'бүгін, ' + fmtTime(dueOf(up)) : fmtDT(dueOf(up)))}</small></div></div>` : `<div class="upc"><span class="ui">✨</span><div><b>${cur ? 'Алдағы дедлайн жоқ' : 'Барлығы орындалды'}</b><small>Жаңа тапсырма осында шығады</small></div></div>`}
     </section>
-    <section class="rbox focus"><div class="fhead"><h3>Фокус бұрышы 🍵</h3><span class="fpill">Pomodoro</span></div>
-      <div class="fmain"><div class="ring" id="fRing"><div class="ring-in"><strong class="num" id="fText">25:00</strong></div></div>
-      <div class="fcopy"><b>Бір нәрсеге фокус</b><p>25 минут өзіңе арна. Хабарламалар кейін де келеді.</p><button type="button" class="btn sm" id="fBtn" data-act="focus"></button></div></div></section>
+    ${focusHtml()}
     <section class="novacard"><span class="nic">${bot()}</span><h3>NOVA жанында ✨</h3><p>${cur ? 'Сайттың қай бөлімі не үшін екенін түсіндіріп берем.' : 'Қиын тақырып па, әлде мотивация керек пе? Мен әрдайым осындамын.'}</p><button class="btn sm" type="button" data-act="open-nova">NOVA-мен сөйлесу →</button></section>`;
   paintFocus();
 }
@@ -1487,6 +1521,8 @@ document.addEventListener('click', async e => {
   if (act === 'goto-day'){ S.date = b.dataset.d; syncDate(); return; }
   if (act === 'jump-tasks'){ const el = ROLE() === 'curator' ? $('#taskForm') : $('#taskList'); if (el) el.scrollIntoView({ behavior:'smooth', block:'start' }); return; }
   if (act === 'focus'){ toggleFocus(); return; }
+  if (act === 'focus-reset'){ resetFocus(); return; }
+  if (act === 'focus-edit'){ S.focus.edit = !S.focus.edit; renderRail(); if (S.focus.edit){ const i = $('#fStudy'); if (i) i.focus(); } return; }
   if (act === 'open-nova'){ const p = $('#hpanel'); p.hidden = false; renderHelper(); return; }
   if (act === 'preview-off'){ setPreview(false); return; }
   if (act === 'add-subj'){ S.addingSubject = true; renderNav(); return; }
@@ -1637,6 +1673,14 @@ document.addEventListener('submit', async e => {
     await cur(() => q(sb.from('subjects').insert({ id, name, ord: order })), 'Пән қосылды');
     location.hash = `s-${id}-analysis`;
     return;
+  }
+  if (f.id === 'focusForm'){
+    e.preventDefault();
+    const cl = n => Math.min(180, Math.max(1, Math.round(+n || 0)));
+    const c = { study: cl($('#fStudy').value), brk: cl($('#fBrk').value) };
+    try { localStorage.setItem('levelup-focus', JSON.stringify(c)); } catch {}
+    S.focus.edit = false; if (!S.focus.endAt) S.focus.left = phaseLen(S.focus.phase);
+    renderRail(); toast(`Сақталды: ${c.study} мин оқу, ${c.brk} мин демалыс`); return;
   }
   if (f.id === 'taskForm'){
     e.preventDefault();
