@@ -1,13 +1,12 @@
-// NOVA: LEVEL UP AI көмекшісі (Vercel serverless function).
+// NOVA: LEVEL UP AI көмекшісі (Vercel serverless function, Google Gemini API).
 // Кілттер тек Vercel → Settings → Environment Variables ішінде сақталады:
-//   ANTHROPIC_API_KEY (міндетті), NOVA_MODEL (міндетті емес), NOVA_DAILY_LIMIT (міндетті емес, әдепкі 30).
-import Anthropic from '@anthropic-ai/sdk';
+//   GEMINI_API_KEY (міндетті), NOVA_MODEL (міндетті емес, әдепкі gemini-2.5-flash), NOVA_DAILY_LIMIT (әдепкі 30).
 
 export const config = { maxDuration: 60 };
 
 const SB_URL = process.env.SUPABASE_URL || 'https://ficyroterazopwcgcmat.supabase.co';
 const SB_KEY = process.env.SUPABASE_ANON_KEY || 'sb_publishable_YrTjjteuFy5kMQWy7LLvZA_AdCnipBe';
-const MODEL = process.env.NOVA_MODEL || 'claude-opus-5-5';
+const MODEL = process.env.NOVA_MODEL || 'gemini-2.5-flash';
 const LIMIT = Math.max(1, parseInt(process.env.NOVA_DAILY_LIMIT || '30', 10) || 30);
 
 const SYSTEM = `Сен — NOVA, LEVEL UP оқу платформасының мейірімді робот-көмекшісісің. Оқушылар ҰБТ-ға (140 балл мақсаты) дайындалып жатыр: Информатика, Математика, Математикалық сауаттылық, Қазақстан тарихы.
@@ -16,7 +15,7 @@ const SYSTEM = `Сен — NOVA, LEVEL UP оқу платформасының м
 - Әрқашан қазақ тілінде, жылы, қарапайым, шынайы адамдай сөйле. Қысқа жаз: әдетте 2–6 сөйлем, қажет болса қысқа тізім.
 - Оқушы амандасса, амандас та, жағдайын сұра ("Қалайсың? Бүгін қай пәнмен айналысып жатырсың?").
 - Оқу сұрағына: түсіндір, мысал келтір, бірақ тапсырманың дайын жауабын бірден берме — алдымен ойлануға бағытта, қадам-қадаммен көмектес. Оқушы өзі шығарып көрген соң тексеруге көмектес.
-- Нақты дерек керек болса (күн, сан, ереже, ҰБТ туралы жаңалық), web_search арқылы тексер. Пән бойынша материалды https://zetix.kz/ сайтынан іздеуге болады (web_fetch тек осы сайт үшін). Қай дереккөзден алғаныңды қысқа айт.
+- Нақты дерек керек болса (күн, сан, ереже, ҰБТ туралы жаңалық), Google іздеуі арқылы тексер. Пән бойынша материалды алдымен https://zetix.kz/ сайтынан ізде (мысалы: site:zetix.kz тақырып). Қай дереккөзден алғаныңды қысқа айт.
 - Оқушы шаршаса, қобалжыса, көңіл-күйі түссе: алдымен сезімін түсінетініңді көрсет, кінәлама, үлкен міндетті кішкентай қадамға бөліп ұсын, демалуды да ұмытпа. Жалған уәде берме.
 
 Қауіпсіздік (өте маңызды):
@@ -46,7 +45,7 @@ function cleanMessages(raw) {
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'method' });
-  if (!process.env.ANTHROPIC_API_KEY) return res.status(503).json({ error: 'not_configured', text: 'NOVA-ның «миы» әлі қосылмаған. Куратор баптауды аяқтаған соң сөйлесе аламыз 🙂' });
+  if (!process.env.GEMINI_API_KEY) return res.status(503).json({ error: 'not_configured', text: 'NOVA-ның «миы» әлі қосылмаған. Куратор баптауды аяқтаған соң сөйлесе аламыз 🙂' });
 
   const token = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
   if (!token) return res.status(401).json({ error: 'auth', text: 'NOVA-мен сөйлесу үшін сайтқа кір.' });
@@ -67,40 +66,33 @@ export default async function handler(req, res) {
   if (!messages.length) return res.status(400).json({ error: 'empty', text: 'Сұрағыңды жаз 🙂' });
 
   const name = String(profile.full_name || '').trim();
-  const newTools = /^claude-(opus|sonnet|fable|mythos)-/.test(MODEL);
-  const tools = [
-    newTools ? { type: 'web_search_20260209', name: 'web_search', max_uses: 3 } : { type: 'web_search_20250305', name: 'web_search', max_uses: 3 },
-    newTools ? { type: 'web_fetch_20260209', name: 'web_fetch', max_uses: 2, allowed_domains: ['zetix.kz'] } : { type: 'web_fetch_20250910', name: 'web_fetch', max_uses: 2, allowed_domains: ['zetix.kz'] },
-  ];
-  const withFallback = /^claude-(opus-5-5|opus-5|sonnet-5-5|fable-5-1|fable-5-2)$/.test(MODEL);
-
-  const client = new Anthropic();
-  const convo = [...messages];
-  if (name) convo.unshift({ role: 'user', content: `(Жүйе ескертпесі: оқушының аты — ${name}. ${profile.role === 'curator' ? 'Бұл — куратор.' : ''})` }, { role: 'assistant', content: 'Түсіндім.' });
+  const sys = SYSTEM + (name ? `\n\nСөйлесіп отырған адамның аты: ${name}.${profile.role === 'curator' ? ' Бұл — куратор.' : ''}` : '');
+  const contents = messages.map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] }));
+  const call = withSearch => fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(MODEL)}:generateContent`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': process.env.GEMINI_API_KEY },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: sys }] },
+      contents,
+      ...(withSearch ? { tools: [{ google_search: {} }] } : {}),
+      generationConfig: { maxOutputTokens: 2048, temperature: 0.7 },
+    }),
+  });
 
   try {
-    let resp;
-    for (let i = 0; i < 3; i++) {
-      resp = await client.beta.messages.create({
-        model: MODEL,
-        max_tokens: 4000,
-        system: SYSTEM,
-        cache_control: { type: 'ephemeral' },
-        output_config: { effort: 'low' },
-        tools,
-        messages: convo,
-        ...(withFallback ? { betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' } : {}),
-      });
-      if (resp.stop_reason !== 'pause_turn') break;
-      convo.push({ role: 'assistant', content: resp.content });
-    }
-    if (resp.stop_reason === 'refusal') return res.status(200).json({ text: 'Бұл сұраққа жауап бере алмаймын. Басқаша сұрап көрейікші немесе куратормен сөйлес.', used, limit: LIMIT });
-    const text = resp.content.filter(b => b.type === 'text').map(b => b.text).join('').trim();
+    let r = await call(true);
+    if (r.status === 400) r = await call(false); // іздеу қолжетімсіз болса, іздеусіз жауап береді
+    if (r.status === 429) return res.status(429).json({ error: 'busy', text: 'Қазір сұрақ көп (тегін лимит). Бір минуттан соң қайта жазшы.' });
+    if (r.status === 401 || r.status === 403) return res.status(503).json({ error: 'key', text: 'NOVA кілті жарамсыз. Куратор Vercel баптауын тексеруі керек.' });
+    if (!r.ok){ console.error('nova gemini', r.status, (await r.text()).slice(0, 300)); return res.status(500).json({ error: 'server', text: 'Байланыс үзілді. Сәлден кейін қайталап көр.' }); }
+    const data = await r.json();
+    const cand = (data.candidates || [])[0] || {};
+    const text = ((cand.content && cand.content.parts) || []).map(p => p.text || '').join('').trim();
+    if (!text && (data.promptFeedback?.blockReason || cand.finishReason === 'SAFETY'))
+      return res.status(200).json({ text: 'Бұл сұраққа жауап бере алмаймын. Егер саған қиын болып тұрса, сенімді ересекке (ата-ана, куратор, мектеп психологы) айт немесе 150 сенім телефонына хабарлас (тегін, тәулік бойы). Қауіп төнсе — 112.', used, limit: LIMIT });
     return res.status(200).json({ text: text || 'Кешір, жауап құрастыра алмадым. Қайта сұрап көрші.', used, limit: LIMIT });
   } catch (e) {
-    if (e instanceof Anthropic.RateLimitError) return res.status(429).json({ error: 'busy', text: 'Қазір сұрақ көп, бір минуттан соң қайта жазшы.' });
-    if (e instanceof Anthropic.AuthenticationError) return res.status(503).json({ error: 'key', text: 'NOVA кілті жарамсыз. Куратор Vercel баптауын тексеруі керек.' });
-    console.error('nova', e && e.status, e && e.message);
+    console.error('nova', e && e.message);
     return res.status(500).json({ error: 'server', text: 'Байланыс үзілді. Сәлден кейін қайталап көр.' });
   }
 }
