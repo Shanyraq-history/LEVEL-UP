@@ -82,11 +82,16 @@ export default async function handler(req, res) {
   });
 
   try {
-    let r = await call(true);
-    if (r.status === 400) r = await call(false); // іздеу қолжетімсіз болса, іздеусіз жауап береді
+    const errOf = async resp => { let m = ''; try { const j = await resp.json(); m = (j.error && (j.error.status + ': ' + j.error.message)) || ''; } catch {} return m.slice(0, 220); };
+    let r = await call(true), err1 = '';
+    if (r.status === 400){ err1 = await errOf(r); if (!/api key/i.test(err1)) r = await call(false); } // іздеу қолжетімсіз болса, іздеусіз жауап береді
     if (r.status === 429) return res.status(429).json({ error: 'busy', text: 'Қазір сұрақ көп (тегін лимит). Бір минуттан соң қайта жазшы.' });
-    if (r.status === 401 || r.status === 403) return res.status(503).json({ error: 'key', text: 'NOVA кілті жарамсыз. Куратор Vercel баптауын тексеруі керек.' });
-    if (!r.ok){ console.error('nova gemini', r.status, (await r.text()).slice(0, 300)); return res.status(500).json({ error: 'server', text: 'Байланыс үзілді. Сәлден кейін қайталап көр.' }); }
+    if (!r.ok){
+      const em = (r.bodyUsed ? err1 : await errOf(r)) || ('HTTP ' + r.status);
+      console.error('nova gemini', r.status, em, err1);
+      if (r.status === 401 || r.status === 403 || /api key|API_KEY/i.test(em)) return res.status(503).json({ error: 'key', text: 'NOVA кілті жарамсыз (Google: ' + em + '). Куратор Vercel-дегі GEMINI_API_KEY мәнін тексеруі керек.' });
+      return res.status(502).json({ error: 'gemini', text: 'Gemini қатесі: ' + em });
+    }
     const data = await r.json();
     const cand = (data.candidates || [])[0] || {};
     const text = ((cand.content && cand.content.parts) || []).map(p => p.text || '').join('').trim();
@@ -95,6 +100,6 @@ export default async function handler(req, res) {
     return res.status(200).json({ text: text || 'Кешір, жауап құрастыра алмадым. Қайта сұрап көрші.', used, limit: LIMIT });
   } catch (e) {
     console.error('nova', e && e.message);
-    return res.status(500).json({ error: 'server', text: 'Байланыс үзілді. Сәлден кейін қайталап көр.' });
+    return res.status(500).json({ error: 'server', text: 'Байланыс үзілді (' + String((e && e.message) || 'қате').slice(0, 120) + '). Сәлден кейін қайталап көр.' });
   }
 }
