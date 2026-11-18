@@ -268,6 +268,7 @@ img{max-width:100%}
 .authtabs button{flex:1;border:0;background:none;color:#9FB6CB;padding:8px;border-radius:9px;font-weight:500;cursor:pointer}
 .authtabs button.on{background:var(--glow);color:#06202B}
 .greet{margin-left:0}
+.pills .addpill{border-style:dashed;color:var(--accent);background:transparent}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 @media (max-width:420px){.row2{grid-template-columns:1fr}}
 </style>
@@ -360,6 +361,22 @@ const TABS = [
   { id:'tests', name:'Тесттер', lead:'Білімді тексеру. Нәтиже бірден шығады және куратор оны көреді.' },
 ];
 const TAB = Object.fromEntries(TABS.map(t => [t.id, t]));
+const KINDS = {
+  mat:{ name:'Материалдар (PDF, файл, сілтеме)', lead:'Материалдар: PDF, файлдар және сілтемелер.', ph:'Мысалы: 1-тарау' },
+  check:{ name:'Чек-лист', lead:'Қадамдық тізімдер: әр пунктті орындаған сайын белгі қой.' },
+  test:{ name:'Тест', lead:'Білімді тексеру. Нәтиже бірден шығады және куратор оны көреді.' },
+};
+const kindOf = t => t.mat ? 'mat' : (t.id === 'checklists' ? 'check' : 'test');
+const DEF_SECS = TABS.map(t => ({ id:t.id, name:t.name, kind:kindOf(t) }));
+function secs(sid){
+  const sj = S.subjects.find(x => x.id === sid);
+  const list = sj && Array.isArray(sj.sections) ? sj.sections : DEF_SECS;
+  return list.map(x => { const b = TAB[x.id]; const k = KINDS[x.kind] || KINDS.mat; return { ...x, kind: KINDS[x.kind] ? x.kind : 'mat', lead: b && b.name === x.name ? b.lead : k.lead, ph: (b && b.ph) || k.ph }; });
+}
+function curSec(){ const l = secs(S.subject); return l.find(x => x.id === S.tab) || l[0] || null; }
+function secName(sid, id){ const x = secs(sid).find(z => z.id === id); return x ? x.name : ''; }
+const secDef = k => k === 'check' ? 'checklists' : 'tests';
+function saveSecs(list, msg){ return cur(() => q(sb.from('subjects').update({ sections: list.map(({ id, name, kind }) => ({ id, name, kind })) }).eq('id', S.subject)), msg); }
 const TIPS = {
   student: {
     plan:'Бүгінгі тапсырмаларды кеш соңына дейін (23:59) орында. Орындаған соң шаршыға белгі қой да, «Дәлел жүктеу» батырмасымен скриншот, фото немесе файл сал. Куратор оны бірден көреді.',
@@ -432,7 +449,7 @@ async function cur(fn, okMsg){
 }
 async function dbDelete(col, id){
   const table = col === 'drafts' ? 'tasks' : col;
-  if (table === 'materials'){ const m = S.materials.find(x => x.id === id); if (m && m.file){ try { await sb.storage.from('materials').remove([m.file.path]); } catch {} } }
+  if (table === 'materials' || table === 'checklists'){ const m = (table === 'materials' ? S.materials : S.checklists).find(x => x.id === id); if (m && m.file){ try { await sb.storage.from('materials').remove([m.file.path]); } catch {} } }
   return q(sb.from(table).delete().eq('id', id));
 }
 
@@ -440,12 +457,12 @@ async function loadAll(){
   if (!sb || !S.uid) return;
   if (Date.now() - S.urlsAt > 3 * 3600e3){ S.urls = {}; S.urlsAt = Date.now(); }
   const [subs, tasks, mats, cls, tests] = await Promise.all(['subjects','tasks','materials','checklists','tests'].map(t => q(sb.from(t).select('*'))));
-  S.subjects = subs.map(x => ({ id:x.id, name:x.name, order:x.ord, createdAt:msOf(x.created_at) }));
+  S.subjects = subs.map(x => ({ id:x.id, name:x.name, order:x.ord, sections: Array.isArray(x.sections) ? x.sections : null, createdAt:msOf(x.created_at) }));
   const tk = tasks.map(t => ({ id:t.id, title:t.title, desc:t.descr, subject:t.subject || '', section:t.section, date:t.date, published:t.published, publishedAt:msOf(t.published_at), createdAt:msOf(t.created_at) }));
   S.tasks = tk.filter(t => t.published); S.drafts = tk.filter(t => !t.published);
   S.materials = mats.map(m => ({ id:m.id, subject:m.subject, section:m.section, title:m.title, desc:m.descr, link:m.link, file: m.file_path ? { path:m.file_path, name:m.file_name } : null, createdAt:msOf(m.created_at) }));
-  S.checklists = cls.map(c => ({ id:c.id, subject:c.subject, title:c.title, items:c.items || [], createdAt:msOf(c.created_at) }));
-  S.tests = tests.map(t => ({ id:t.id, subject:t.subject, title:t.title, questions:t.questions || [], createdAt:msOf(t.created_at) }));
+  S.checklists = cls.map(c => ({ id:c.id, subject:c.subject, section:c.section || '', title:c.title, items:c.items || [], file: c.file_path ? { path:c.file_path, name:c.file_name } : null, createdAt:msOf(c.created_at) }));
+  S.tests = tests.map(t => ({ id:t.id, subject:t.subject, section:t.section || '', title:t.title, questions:t.questions || [], createdAt:msOf(t.created_at) }));
   if (S.role === 'curator'){
     const [profs, prog] = await Promise.all([q(sb.from('profiles').select('*').eq('role', 'student')), q(sb.from('progress').select('*'))]);
     S.students = Object.fromEntries(profs.map(p => [p.id, { id:p.id, name:p.full_name || p.login, group:p.grp, login:p.login, joinedAt:msOf(p.created_at) }]));
@@ -462,7 +479,7 @@ async function signUrls(){
   const addP = d => Object.values((d && d.tasks) || {}).forEach(tp => (tp.proofs || []).forEach(p => { if (p.path && !S.urls[p.path]) need.proofs.add(p.path); }));
   if (S.role === 'curator') Object.values(S.progress).forEach(addP);
   addP(S.my);
-  S.materials.forEach(m => { if (m.file && !S.urls['m:' + m.file.path]) need.materials.add(m.file.path); });
+  [...S.materials, ...S.checklists].forEach(m => { if (m.file && !S.urls['m:' + m.file.path]) need.materials.add(m.file.path); });
   for (const bk of ['proofs', 'materials']){
     const paths = [...need[bk]]; if (!paths.length) continue;
     try {
@@ -569,19 +586,19 @@ function renderGreet(){
 /* ---------- routing ---------- */
 function route(){
   const h = (location.hash || '').slice(1);
-  const m = /^s-([a-z0-9]+)-([a-z]+)$/.exec(h);
-  if (m && TAB[m[2]]){ S.view = 'subject'; S.subject = m[1]; S.tab = m[2]; }
+  const m = /^s-([a-z0-9]+)-([a-z0-9]+)$/.exec(h);
+  if (m){ S.view = 'subject'; S.subject = m[1]; S.tab = m[2]; }
   else if (h === 'students'){ S.view = 'students'; }
   else { S.view = 'plan'; }
   S.testOpen = null;
 }
-window.addEventListener('hashchange', () => { route(); renderShell(); renderHelper(); window.scrollTo({top:0}); });
+window.addEventListener('hashchange', () => { S.secForm = null; route(); renderShell(); renderHelper(); window.scrollTo({top:0}); });
 
 function tabCount(sid, tab){
-  if (TAB[tab].mat) return S.materials.filter(m => m.subject === sid && m.section === tab).length;
-  if (tab === 'checklists') return S.checklists.filter(c => c.subject === sid).length;
-  if (tab === 'tests') return S.tests.filter(c => c.subject === sid).length;
-  return '';
+  const sc = secs(sid).find(x => x.id === tab); if (!sc) return '';
+  if (sc.kind === 'mat') return S.materials.filter(m => m.subject === sid && m.section === tab).length;
+  if (sc.kind === 'check') return S.checklists.filter(c => c.subject === sid && (c.section || 'checklists') === tab).length;
+  return S.tests.filter(c => c.subject === sid && (c.section || 'tests') === tab).length;
 }
 const ICONS = {
   home:'<path d="M4 11.5 12 4l8 7.5V20a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1z"/>',
@@ -604,7 +621,7 @@ function renderNav(){
   subs.forEach(s => {
     const on = S.view === 'subject' && S.subject === s.id;
     h += `<a href="#s-${esc(s.id)}-analysis" class="${on ? 'subj-on' : ''}" ${on ? 'aria-current="true"' : ''}>${ico(s.id)}<span class="nl">${esc(s.name)}</span></a>`;
-    if (on) h += `<div class="sub">${TABS.map(tb => `<a href="#s-${esc(s.id)}-${tb.id}" ${S.tab===tb.id ? 'aria-current="page"' : ''}><span class="nl">${esc(tb.name)}</span><span class="cnt num">${tabCount(s.id, tb.id) || ''}</span></a>`).join('')}</div>`;
+    if (on) h += `<div class="sub">${secs(s.id).map(tb => `<a href="#s-${esc(s.id)}-${tb.id}" ${S.tab===tb.id ? 'aria-current="page"' : ''}><span class="nl">${esc(tb.name)}</span><span class="cnt num">${tabCount(s.id, tb.id) || ''}</span></a>`).join('')}</div>`;
   });
   if (!subs.length) h += `<p class="nempty">${S.role==='loading' ? 'Жүктелуде…' : 'Пән әлі қосылмаған'}</p>`;
   if (r === 'curator'){
@@ -647,35 +664,42 @@ function renderShell(){
         <label class="f">Тапсырма<input id="tTitle" required maxlength="140" placeholder="Мысалы: Математика, 3-нұсқа: 1–10 есептерді шығару"></label>
         <label class="f">Түсіндірме (міндетті емес)<textarea id="tDesc" maxlength="1200" placeholder="Не істеу керек, қандай дәлел жүктеу керек"></textarea></label>
         <div class="row"><label class="f">Пән<select id="tSubj"><option value="">Таңдалмаған</option>${subjects().map(s=>`<option value="${esc(s.id)}">${esc(s.name)}</option>`).join('')}</select></label>
-        <label class="f">Бөлім<select id="tSec"><option value="">Таңдалмаған</option>${TABS.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('')}</select></label></div>
+        <label class="f">Бөлім<select id="tSec"><option value="">Таңдалмаған</option></select></label></div>
         <div class="actions"><button class="btn primary" type="submit" data-mode="publish">Жариялау</button><button class="btn" type="submit" data-mode="draft">Жоба ретінде сақтау</button><span class="muted" style="font-size:.82rem">Жарияланған тапсырманы барлық оқушы бірден көреді.</span></div>
       </form><div id="draftList" class="list"></div>`;
     } else html += `<div id="deadline"></div>`;
     html += `<div id="taskList" class="list"></div>`;
   } else if (v === 'subject'){
-    const tb = TAB[S.tab], sid = S.subject;
-    html += `<section class="vhead"><div><p class="eyebrow">Пән</p><h1 id="subjTitle">${esc(subjName(sid) || '…')}</h1><p class="lead">${esc(tb.lead)}</p></div>
-      ${r==='curator' ? `<button class="btn sm ghost danger" data-act="del-subj" data-id="${esc(sid)}">Пәнді өшіру</button>` : ''}</section>
+    const tb = curSec(), sid = S.subject;
+    S.shellKey = tb ? `${sid}:${tb.id}:${tb.kind}` : `${sid}:none`;
+    html += `<section class="vhead"><div><p class="eyebrow">Пән</p><h1 id="subjTitle">${esc(subjName(sid) || '…')}</h1><p class="lead">${esc(tb ? tb.lead : 'Бұл пәнде әзірге бөлім жоқ.')}</p></div>
+      ${r==='curator' ? `<div class="actions">${tb ? `<button class="btn sm ghost" data-act="ren-sec">Бөлім атын өзгерту</button><button class="btn sm ghost danger" data-act="del-sec">Бөлімді өшіру</button>` : ''}<button class="btn sm ghost danger" data-act="del-subj" data-id="${esc(sid)}">Пәнді өшіру</button></div>` : ''}</section>
       <nav class="pills" id="pills" aria-label="Пән бөлімдері"></nav>`;
-    if (tb.mat){
+    if (r === 'curator' && S.secForm === 'add') html += `<form class="card composer" id="secForm"><h2>Жаңа бөлім</h2><div class="row"><label class="f">Бөлім атауы<input id="sName" required maxlength="40" placeholder="Мысалы: Тапсырмалар"></label>
+      <label class="f">Түрі<select id="sKind">${Object.entries(KINDS).map(([k, v]) => `<option value="${k}">${esc(v.name)}</option>`).join('')}</select></label></div>
+      <div class="actions"><button class="btn primary">Қосу</button><button type="button" class="btn ghost" data-act="sec-cancel">Болдырмау</button></div></form>`;
+    if (r === 'curator' && S.secForm === 'ren' && tb) html += `<form class="card composer" id="renForm"><label class="f">Бөлімнің жаңа атауы<input id="rnName" required maxlength="40" value="${esc(tb.name)}"></label>
+      <div class="actions"><button class="btn primary">Сақтау</button><button type="button" class="btn ghost" data-act="sec-cancel">Болдырмау</button></div></form>`;
+    if (!tb){ html += `<div id="noSec"></div>`; }
+    else if (tb.kind === 'mat'){
       if (r === 'curator') html += `<form class="card composer" id="matForm">
         <h2>${esc(tb.name)}: жаңа материал</h2>
-        <div class="row"><label class="f">Атауы<input id="mTitle" required maxlength="140" placeholder="${esc(tb.ph)}"></label>
+        <div class="row"><label class="f">Атауы<input id="mTitle" required maxlength="140" placeholder="${esc(tb.ph || '')}"></label>
         <label class="f">Сілтеме (міндетті емес)<input id="mLink" type="url" placeholder="https://"></label></div>
         <label class="f">Сипаттама<textarea id="mDesc" maxlength="4000"></textarea></label>
-        <div class="actions"><label class="btn upload">Файл тіркеу<input type="file" id="mFile"></label><span id="mFileName" class="muted" style="font-size:.85rem"></span><button class="btn primary" type="submit" style="margin-left:auto">Қосу</button></div>
+        <div class="actions"><label class="btn upload">PDF / файл тіркеу<input type="file" id="mFile" accept=".pdf,application/pdf,image/*,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip,.txt"></label><span id="mFileName" class="muted" style="font-size:.85rem"></span><button class="btn primary" type="submit" style="margin-left:auto">Қосу</button></div>
       </form>`;
       html += `<div id="matList" class="grid"></div>`;
-    } else if (S.tab === 'checklists'){
+    } else if (tb.kind === 'check'){
       if (r === 'curator') html += `<form class="card composer" id="clForm">
-        <h2>Жаңа чек-лист</h2>
+        <h2>${esc(tb.name)}: жаңа чек-лист</h2>
         <label class="f">Атауы<input id="cTitle" required maxlength="140" placeholder="Мысалы: Тақырыпты қайталау"></label>
-        <label class="f">Пункттер (әрқайсысы жаңа жолдан)<textarea id="cItems" required placeholder="Формулаларды жаттау\n10 есеп шығару\nҚателерді талдау"></textarea></label>
-        <div class="actions"><button class="btn primary" type="submit">Жариялау</button></div></form>`;
+        <label class="f">Пункттер (әрқайсысы жаңа жолдан; PDF тіркесеңіз, бос қалдыруға болады)<textarea id="cItems" placeholder="Формулаларды жаттау\n10 есеп шығару\nҚателерді талдау"></textarea></label>
+        <div class="actions"><label class="btn upload">PDF / файл тіркеу<input type="file" id="cFile" accept=".pdf,application/pdf,image/*,.doc,.docx"></label><span id="cFileName" class="muted" style="font-size:.85rem"></span><button class="btn primary" type="submit" style="margin-left:auto">Жариялау</button></div></form>`;
       html += `<div id="clList" class="grid"></div>`;
-    } else if (S.tab === 'tests'){
+    } else {
       if (r === 'curator') html += `<form class="card composer" id="testForm">
-        <h2>Жаңа тест</h2>
+        <h2>${esc(tb.name)}: жаңа тест</h2>
         <label class="f">Тест атауы<input id="qTitle" required maxlength="140" placeholder="Мысалы: 1-тақырып бойынша тест"></label>
         <div id="qBlocks" class="list"></div>
         <div class="actions"><button class="btn" type="button" data-act="add-q">+ Сұрақ қосу</button><button class="btn primary" type="submit" style="margin-left:auto">Тестті жариялау</button></div></form>`;
@@ -686,7 +710,7 @@ function renderShell(){
       <div class="datectl"><span class="muted">Күн:</span><button class="btn sm" data-act="day" data-d="-1">‹</button><input type="date" id="planDate" value="${S.date}"><button class="btn sm" data-act="day" data-d="1">›</button><button class="btn sm ghost" data-act="today">Бүгін</button></div><div id="stuList"></div><div id="stuDetail"></div>`;
   }
   $('#main').innerHTML = html;
-  if (v === 'subject' && S.tab === 'tests' && r === 'curator') addQ();
+  if (v === 'subject' && curSec() && curSec().kind === 'test' && r === 'curator') addQ();
   renderData();
 }
 
@@ -707,8 +731,9 @@ function statusChip(tp, task){
 }
 function taskTags(t){
   let h = '';
-  if (t.subject && subjName(t.subject)) h += `<a class="tag" href="#s-${esc(t.subject)}-${TAB[t.section] ? t.section : 'analysis'}">${esc(subjName(t.subject))}</a>`;
-  if (TAB[t.section]) h += t.subject ? `<span class="tag" style="color:var(--muted)">${esc(TAB[t.section].name)}</span>` : `<span class="tag">${esc(TAB[t.section].name)}</span>`;
+  const sn = t.subject ? secName(t.subject, t.section) : '';
+  if (t.subject && subjName(t.subject)) h += `<a class="tag" href="#s-${esc(t.subject)}-${esc(sn ? t.section : ((secs(t.subject)[0] || {}).id || 'analysis'))}">${esc(subjName(t.subject))}</a>`;
+  if (sn) h += `<span class="tag" style="color:var(--muted)">${esc(sn)}</span>`;
   return h;
 }
 
@@ -720,10 +745,14 @@ function renderData(){
   if (v === 'plan') r === 'curator' ? renderPlanCurator() : renderPlanStudent();
   else if (v === 'subject'){
     const st = $('#subjTitle'); if (st) st.textContent = subjName(S.subject) || (S.subjects.length ? 'Пән табылмады' : '…');
-    const p = $('#pills'); if (p) p.innerHTML = TABS.map(tb => `<a href="#s-${esc(S.subject)}-${tb.id}" ${S.tab===tb.id ? 'aria-current="page"' : ''}>${esc(tb.name)}<span class="cnt">${tabCount(S.subject, tb.id)}</span></a>`).join('');
-    if (TAB[S.tab].mat) renderMaterials();
-    else if (S.tab === 'checklists') renderChecklists();
-    else if (S.tab === 'tests') renderTests();
+    const cs = curSec();
+    if (S.shellKey !== (cs ? `${S.subject}:${cs.id}:${cs.kind}` : `${S.subject}:none`)){ renderShell(); return; }
+    const p = $('#pills'); if (p) p.innerHTML = secs(S.subject).map(tb => `<a href="#s-${esc(S.subject)}-${tb.id}" ${S.tab===tb.id ? 'aria-current="page"' : ''}>${esc(tb.name)}<span class="cnt">${tabCount(S.subject, tb.id)}</span></a>`).join('');
+    if (p && ROLE() === 'curator') p.innerHTML += `<a href="#" data-act="add-sec" class="addpill">+ Бөлім қосу</a>`;
+    if (!cs){ const n = $('#noSec'); if (n) n.innerHTML = emptyBox(ROLE() === 'curator' ? 'Бұл пәнде бөлім жоқ. «+ Бөлім қосу» батырмасымен бөлім ашыңыз.' : 'Куратор бұл пәнге әлі бөлім қоспады.'); }
+    else if (cs.kind === 'mat') renderMaterials();
+    else if (cs.kind === 'check') renderChecklists();
+    else renderTests();
   }
   else if (v === 'students') renderStudents();
 }
@@ -808,9 +837,10 @@ function renderMaterials(){
     </div></article>`).join('');
 }
 
+function clFile(c){ return c.file ? `<div class="actions"><a class="btn sm" href="${esc(fileUrl('materials', c.file.path))}" target="_blank" rel="noopener">📄 ${esc(c.file.name)}</a></div>` : ''; }
 function renderChecklists(){
   const el = $('#clList'); if (!el) return;
-  const items = S.checklists.filter(c => c.subject === S.subject).sort((a,b) => (b.createdAt||0) - (a.createdAt||0));
+  const items = S.checklists.filter(c => c.subject === S.subject && (c.section || 'checklists') === S.tab).sort((a,b) => (b.createdAt||0) - (a.createdAt||0));
   if (!items.length){ el.innerHTML = emptyBox(ROLE()==='curator' ? 'Чек-лист әлі жоқ. Жоғарыда біріншісін жасаңыз.' : 'Куратор бұл пәнге әлі чек-лист жарияламады.'); return; }
   const r = ROLE(), studs = studentList();
   el.innerHTML = items.map(c => {
@@ -818,23 +848,23 @@ function renderChecklists(){
     if (r === 'curator'){
       const rates = studs.map(s => ({ s, n: its.filter((_, i) => S.progress[s.id]?.checks?.[c.id]?.[i]).length }));
       const avg = rates.length ? Math.round(rates.reduce((a, x) => a + pct(x.n, its.length), 0) / rates.length) : 0;
-      return `<article class="card" style="display:flex;flex-direction:column;gap:8px"><div class="thead"><h3>${esc(c.title)}</h3><span class="chip">${its.length} пункт</span></div>
-        <ol style="margin:0;padding-left:20px;color:var(--muted)">${its.map(i => `<li>${esc(i)}</li>`).join('')}</ol>
-        <div class="mini"><div class="bar" style="flex:1;width:auto"><i style="width:${avg}%"></i></div><span class="num">${avg}%</span><span class="muted" style="font-size:.8rem">орташа</span></div>
-        ${rates.length ? `<div class="who">${rates.map(x => `<div class="who-row"><span>${esc(x.s.name)}</span><span class="num">${x.n}/${its.length}</span></div>`).join('')}</div>` : ''}
+      return `<article class="card" style="display:flex;flex-direction:column;gap:8px"><div class="thead"><h3>${esc(c.title)}</h3><span class="chip">${its.length ? its.length + ' пункт' : 'Файл'}</span></div>
+        ${clFile(c)}${its.length ? `<ol style="margin:0;padding-left:20px;color:var(--muted)">${its.map(i => `<li>${esc(i)}</li>`).join('')}</ol>` : ''}
+        ${its.length ? `<div class="mini"><div class="bar" style="flex:1;width:auto"><i style="width:${avg}%"></i></div><span class="num">${avg}%</span><span class="muted" style="font-size:.8rem">орташа</span></div>` : ''}
+        ${rates.length && its.length ? `<div class="who">${rates.map(x => `<div class="who-row"><span>${esc(x.s.name)}</span><span class="num">${x.n}/${its.length}</span></div>`).join('')}</div>` : ''}
         <div class="actions"><button class="btn sm ghost danger" data-act="del" data-col="checklists" data-id="${esc(c.id)}">Өшіру</button></div></article>`;
     }
     const st = MY().checks?.[c.id] || {};
     const n = its.filter((_, i) => st[i]).length;
     return `<article class="card" style="display:flex;flex-direction:column;gap:6px"><div class="thead"><h3>${esc(c.title)}</h3><span class="num muted">${n}/${its.length}</span></div>
-      <div class="bar"><i style="width:${pct(n, its.length)}%"></i></div>
+      ${clFile(c)}${its.length ? `<div class="bar"><i style="width:${pct(n, its.length)}%"></i></div>` : ''}
       <div class="cl-items">${its.map((it, i) => `<label class="${st[i] ? 'done' : ''}"><input type="checkbox" data-act="check" data-c="${esc(c.id)}" data-i="${i}" ${st[i] ? 'checked' : ''}><span>${esc(it)}</span></label>`).join('')}</div></article>`;
   }).join('');
 }
 
 function renderTests(){
   const el = $('#testList'); if (!el) return;
-  const items = S.tests.filter(t => t.subject === S.subject).sort((a,b) => (b.createdAt||0) - (a.createdAt||0));
+  const items = S.tests.filter(t => t.subject === S.subject && (t.section || 'tests') === S.tab).sort((a,b) => (b.createdAt||0) - (a.createdAt||0));
   if (!items.length){ el.innerHTML = emptyBox(ROLE()==='curator' ? 'Тест әлі жоқ. Жоғарыдағы құрастырушымен біріншісін жасаңыз.' : 'Куратор бұл пәнге әлі тест жарияламады.'); return; }
   const r = ROLE(), studs = studentList();
   el.innerHTML = items.map(t => {
@@ -910,9 +940,10 @@ function renderStudents(){
 /* ---------- helper panel ---------- */
 function renderHelper(){
   const r = S.role === 'curator' && !S.preview ? 'curator' : 'student';
-  const key = S.view === 'subject' ? S.tab : S.view;
+  const cs0 = S.view === 'subject' ? curSec() : null;
+  const key = S.view === 'subject' ? (cs0 ? (TAB[cs0.id] ? cs0.id : ({ mat:'books', check:'checklists', test:'tests' })[cs0.kind]) : 'books') : S.view;
   const tip = TIPS[r][key] || TIPS[r].plan;
-  const where = S.view === 'subject' ? `${subjName(S.subject) || 'Пән'} · ${TAB[S.tab].name}` : (S.view === 'students' ? 'Оқушылар' : 'Күндік жоспар');
+  const where = S.view === 'subject' ? `${subjName(S.subject) || 'Пән'} · ${cs0 ? cs0.name : ''}` : (S.view === 'students' ? 'Оқушылар' : 'Күндік жоспар');
   const msgs = $('#hmsgs');
   msgs.innerHTML = `<div class="msg bot">Сәлем! Мен — Робот X. Қазір сен «${esc(where)}» бөліміндесің. ${esc(tip)}</div>` + S.chat.map(m => `<div class="msg ${m.me?'me':'bot'}">${esc(m.text)}</div>`).join('');
   $('#hform').hidden = !S.sample;
@@ -927,7 +958,7 @@ $('#hform').addEventListener('submit', async e => {
   S.chat.push({ me:true, text:q }); const ans = { text:'Ойланып жатырмын…' }; S.chat.push(ans); renderHelper();
   const bubble = $('#hmsgs').lastElementChild;
   const hist = S.chat.slice(-8, -1).map(m => (m.me ? 'Пайдаланушы: ' : 'Робот X: ') + m.text).join('\n');
-  const where = S.view === 'subject' ? `${subjName(S.subject)}, ${TAB[S.tab].name}` : 'Күндік жоспар';
+  const where = S.view === 'subject' ? `${subjName(S.subject)}, ${(curSec() || {}).name || ''}` : 'Күндік жоспар';
   const prompt = `Сен — Робот X, LEVEL UP атты оқу платформасының мейірімді робот-көмекшісісің. Платформадағы пәндер: ${subjects().map(s=>s.name).join(', ')}. Пайдаланушы: ${S.role==='curator'?'куратор':'оқушы'}. Ағымдағы бөлім: ${where}. Тек қазақ тілінде, қысқа (5 сөйлемге дейін), түсінікті жауап бер. Оқушыға дайын жауапты бірден берме, ойлануға бағытта.\n\nСөйлесу:\n${hist}\n\nЖаңа сұрақ: ${q}`;
   try {
     const res = await S.sample(prompt, { modelTier:'quick', cache:false, onText: ({ text }) => { ans.text = text; bubble.textContent = text; } });
@@ -947,6 +978,22 @@ document.addEventListener('click', async e => {
   if (act === 'today'){ S.date = today(); syncDate(); return; }
   if (act === 'preview-off'){ setPreview(false); return; }
   if (act === 'add-subj'){ S.addingSubject = true; renderNav(); return; }
+  if (act === 'add-sec'){ e.preventDefault(); S.secForm = 'add'; renderShell(); const i = $('#sName'); if (i) i.focus(); return; }
+  if (act === 'ren-sec'){ S.secForm = 'ren'; renderShell(); const i = $('#rnName'); if (i) i.focus(); return; }
+  if (act === 'sec-cancel'){ S.secForm = null; renderShell(); return; }
+  if (act === 'del-sec'){
+    if (!b.dataset.armed){ b.dataset.armed = '1'; const old = b.textContent; b.textContent = 'Ішіндегісімен бірге өшіру?'; setTimeout(() => { if (b.isConnected){ delete b.dataset.armed; b.textContent = old; } }, 3500); return; }
+    const cs = curSec(); if (!cs) return;
+    const list = secs(S.subject).filter(x => x.id !== cs.id);
+    const tbl = cs.kind === 'mat' ? 'materials' : (cs.kind === 'check' ? 'checklists' : 'tests');
+    await cur(async () => {
+      await q(sb.from(tbl).delete().eq('subject', S.subject).eq('section', cs.id));
+      if (cs.kind !== 'mat' && cs.id === secDef(cs.kind)) await q(sb.from(tbl).delete().eq('subject', S.subject).is('section', null));
+      await q(sb.from('subjects').update({ sections: list.map(({ id, name, kind }) => ({ id, name, kind })) }).eq('id', S.subject));
+    }, 'Бөлім өшірілді');
+    location.hash = list[0] ? `s-${S.subject}-${list[0].id}` : `s-${S.subject}-none`;
+    return;
+  }
   if (act === 'toggle-task'){ S.openTasks[b.dataset.id] = !S.openTasks[b.dataset.id]; renderData(); return; }
   if (act === 'open-stu'){ S.openStudent = S.openStudent === b.dataset.id ? null : b.dataset.id; renderData(); if (S.openStudent) $('#stuDetail').scrollIntoView({ behavior:'smooth', block:'start' }); return; }
   if (act === 'open-test'){ S.testOpen = S.testOpen === b.dataset.id ? null : b.dataset.id; renderData(); return; }
@@ -994,6 +1041,8 @@ document.addEventListener('change', async e => {
   const t = e.target;
   if (t.id === 'planDate'){ if (t.value){ S.date = t.value; syncDate(); } return; }
   if (t.id === 'mFile'){ $('#mFileName').textContent = t.files[0] ? t.files[0].name : ''; return; }
+  if (t.id === 'cFile'){ $('#cFileName').textContent = t.files[0] ? t.files[0].name : ''; return; }
+  if (t.id === 'tSubj'){ fillSecSelect(); return; }
   if (t.dataset.act === 'tick'){
     const tid = t.dataset.t, done = t.checked;
     await writeMy({ tasks: { [tid]: { done, doneAt: done ? Date.now() : null } } });
@@ -1047,6 +1096,22 @@ document.addEventListener('submit', async e => {
     } catch (err){ authErr(authMsg(err)); }
     return;
   }
+  if (f.id === 'secForm'){
+    e.preventDefault();
+    const name = $('#sName').value.trim(); if (!name) return;
+    const id = newId(), kind = $('#sKind').value;
+    S.secForm = null;
+    await saveSecs([...secs(S.subject), { id, name, kind }], 'Бөлім қосылды');
+    location.hash = `s-${S.subject}-${id}`;
+    return;
+  }
+  if (f.id === 'renForm'){
+    e.preventDefault();
+    const name = $('#rnName').value.trim(); if (!name) return;
+    S.secForm = null;
+    await saveSecs(secs(S.subject).map(x => x.id === S.tab ? { ...x, name } : x), 'Атауы өзгертілді');
+    renderShell(); return;
+  }
   if (f.id === 'subjForm'){
     e.preventDefault();
     const name = $('#subjName').value.trim(); if (!name) return;
@@ -1081,9 +1146,13 @@ document.addEventListener('submit', async e => {
   if (f.id === 'clForm'){
     e.preventDefault();
     const items = $('#cItems').value.split('\n').map(s => s.trim()).filter(Boolean);
-    if (!items.length) return;
-    await cur(() => q(sb.from('checklists').insert({ subject:S.subject, title:$('#cTitle').value.trim(), items })), 'Чек-лист жарияланды');
-    f.reset(); return;
+    const fi = $('#cFile').files[0];
+    if (!items.length && !fi){ toast('Пункттерді жазыңыз немесе PDF тіркеңіз'); return; }
+    const btn = f.querySelector('[type=submit]'); btn.disabled = true;
+    let file = null;
+    if (fi){ try { const path = `${S.subject}/${Date.now()}-${safeName(fi.name)}`; const up = await sb.storage.from('materials').upload(path, fi, { contentType: fi.type || undefined }); if (up.error) throw up.error; file = { path, name:fi.name }; } catch { toast('Файл жүктелмеді'); btn.disabled = false; return; } }
+    await cur(() => q(sb.from('checklists').insert({ subject:S.subject, section:S.tab, title:$('#cTitle').value.trim(), items, file_path:file ? file.path : null, file_name:file ? file.name : null })), 'Чек-лист жарияланды');
+    f.reset(); $('#cFileName').textContent = ''; btn.disabled = false; return;
   }
   if (f.id === 'testForm'){
     e.preventDefault();
@@ -1093,7 +1162,7 @@ document.addEventListener('submit', async e => {
       answer: +(qb.querySelector('input[type=radio]:checked')?.value ?? 0),
     })).filter(q => q.q && q.options.every(Boolean));
     if (!questions.length){ toast('Кемінде бір толық сұрақ қосыңыз'); return; }
-    await cur(() => q(sb.from('tests').insert({ subject:S.subject, title:$('#qTitle').value.trim(), questions })), 'Тест жарияланды');
+    await cur(() => q(sb.from('tests').insert({ subject:S.subject, section:S.tab, title:$('#qTitle').value.trim(), questions })), 'Тест жарияланды');
     renderShell(); return;
   }
   if (f.classList.contains('testrun')){
@@ -1107,6 +1176,7 @@ document.addEventListener('submit', async e => {
   }
 });
 
+function fillSecSelect(){ const sel = $('#tSec'), sj = $('#tSubj'); if (!sel || !sj) return; const v = sel.value; sel.innerHTML = `<option value="">Таңдалмаған</option>` + (sj.value ? secs(sj.value).map(x => `<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('') : ''); sel.value = v; }
 let qSeq = 0;
 function addQ(){
   const box = $('#qBlocks'); if (!box) return;
