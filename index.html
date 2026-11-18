@@ -351,13 +351,33 @@ body{background:radial-gradient(circle at 82% 2%,var(--halo) 0%,transparent 25%)
 :root[data-subj="ms"]{--sc:#00A3B6}
 :root[data-subj="mat"]{--sc:#1B36B0}
 :root[data-subj]:not([data-subj=""]){
-  --accent:color-mix(in srgb,var(--sc) 82%,var(--ink)); --glow:color-mix(in srgb,var(--sc) 60%,var(--surface)); --prog:var(--sc);
-  --nav-on:color-mix(in srgb,var(--sc) 14%,var(--surface)); --halo:color-mix(in srgb,var(--sc) 30%,var(--bg));
-  --hero-a:color-mix(in srgb,var(--sc) 26%,var(--surface)); --hero-b:color-mix(in srgb,var(--sc) 14%,var(--surface)); --hero-c:color-mix(in srgb,var(--sc) 6%,var(--surface));
-  --hero-line:color-mix(in srgb,var(--sc) 24%,var(--surface)); --circle:color-mix(in srgb,var(--sc) 40%,var(--surface));
-  --t1:color-mix(in srgb,var(--sc) 12%,var(--surface)); --t2:color-mix(in srgb,var(--sc) 8%,var(--surface));
+  --bg:color-mix(in srgb,var(--sc) 8%,#F6F8F5); --surface:color-mix(in srgb,var(--sc) 3%,#FFFEFB); --surface-2:color-mix(in srgb,var(--sc) 10%,#FFFEFB); --line:color-mix(in srgb,var(--sc) 20%,#E4ECE8);
+  --ink:color-mix(in srgb,var(--sc) 28%,#1D2A30); --muted:color-mix(in srgb,var(--sc) 30%,#6C8382); --soft:color-mix(in srgb,var(--sc) 22%,#A7B5B1); --nav-ink:color-mix(in srgb,var(--sc) 30%,#74888B);
+  --visor:color-mix(in srgb,var(--sc) 85%,#0C1A20); --visor-ink:#FFFFFF; --glow:color-mix(in srgb,var(--sc) 50%,#FFFFFF); --accent:color-mix(in srgb,var(--sc) 88%,#000000); --on-accent:#FFFFFF; --prog:var(--sc);
+  --nav-on:color-mix(in srgb,var(--sc) 13%,#FFFFFF); --halo:color-mix(in srgb,var(--sc) 25%,#FFFFFF);
+  --hero-a:color-mix(in srgb,var(--sc) 26%,#FFFFFF); --hero-b:color-mix(in srgb,var(--sc) 14%,#FFFFFF); --hero-c:color-mix(in srgb,var(--sc) 6%,#FFFFFF); --hero-line:color-mix(in srgb,var(--sc) 24%,#FFFFFF);
+  --hero-ink:color-mix(in srgb,var(--sc) 75%,#000000); --hero-sub:color-mix(in srgb,var(--sc) 40%,#54716E); --circle:color-mix(in srgb,var(--sc) 40%,#FFFFFF);
+  --t1:color-mix(in srgb,var(--sc) 12%,#FFFFFF); --t2:color-mix(in srgb,var(--sc) 8%,#FFFFFF); --shadow:0 14px 42px color-mix(in srgb,var(--sc) 10%,transparent);
 }
-:root[data-subj]:not([data-subj=""]) body{background:radial-gradient(circle at 88% 0%,color-mix(in srgb,var(--sc) 40%,transparent) 0%,transparent 42%),radial-gradient(circle at 0% 100%,color-mix(in srgb,var(--sc) 20%,transparent) 0%,transparent 45%),var(--bg);background-attachment:fixed;transition:background .3s}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"])[data-subj]:not([data-subj=""]){
+  --bg:color-mix(in srgb,var(--sc) 12%,#091216); --surface:color-mix(in srgb,var(--sc) 15%,#0F1B20); --surface-2:color-mix(in srgb,var(--sc) 22%,#13232A); --line:color-mix(in srgb,var(--sc) 30%,#1A2B31);
+  --ink:color-mix(in srgb,var(--sc) 8%,#EEF2F3); --muted:color-mix(in srgb,var(--sc) 25%,#9AACB0); --soft:color-mix(in srgb,var(--sc) 25%,#6F8C88); --nav-ink:color-mix(in srgb,var(--sc) 22%,#9AACB0);
+  --visor:color-mix(in srgb,var(--sc) 32%,#091216); --visor-ink:#F3F6F7; --glow:color-mix(in srgb,var(--sc) 60%,#FFFFFF); --accent:color-mix(in srgb,var(--sc) 60%,#FFFFFF); --on-accent:#0A1216; --prog:color-mix(in srgb,var(--sc) 75%,#FFFFFF);
+  --nav-on:color-mix(in srgb,var(--sc) 26%,transparent); --halo:color-mix(in srgb,var(--sc) 38%,#091216);
+  --hero-a:color-mix(in srgb,var(--sc) 48%,#091216); --hero-b:color-mix(in srgb,var(--sc) 34%,#091216); --hero-c:color-mix(in srgb,var(--sc) 20%,#091216); --hero-line:color-mix(in srgb,var(--sc) 45%,#1A2B31);
+  --hero-ink:#F3F6F7; --hero-sub:color-mix(in srgb,var(--sc) 22%,#B9C8CB); --circle:color-mix(in srgb,var(--sc) 55%,#091216);
+  --t1:color-mix(in srgb,var(--sc) 24%,#0F1B20); --t2:color-mix(in srgb,var(--sc) 18%,#0F1B20);
+}}
+:root[data-theme="dark"][data-subj]:not([data-subj=""]){
+  --bg:color-mix(in srgb,var(--sc) 12%,#091216); --surface:color-mix(in srgb,var(--sc) 15%,#0F1B20); --surface-2:color-mix(in srgb,var(--sc) 22%,#13232A); --line:color-mix(in srgb,var(--sc) 30%,#1A2B31);
+  --ink:color-mix(in srgb,var(--sc) 8%,#EEF2F3); --muted:color-mix(in srgb,var(--sc) 25%,#9AACB0); --soft:color-mix(in srgb,var(--sc) 25%,#6F8C88); --nav-ink:color-mix(in srgb,var(--sc) 22%,#9AACB0);
+  --visor:color-mix(in srgb,var(--sc) 32%,#091216); --visor-ink:#F3F6F7; --glow:color-mix(in srgb,var(--sc) 60%,#FFFFFF); --accent:color-mix(in srgb,var(--sc) 60%,#FFFFFF); --on-accent:#0A1216; --prog:color-mix(in srgb,var(--sc) 75%,#FFFFFF);
+  --nav-on:color-mix(in srgb,var(--sc) 26%,transparent); --halo:color-mix(in srgb,var(--sc) 38%,#091216);
+  --hero-a:color-mix(in srgb,var(--sc) 48%,#091216); --hero-b:color-mix(in srgb,var(--sc) 34%,#091216); --hero-c:color-mix(in srgb,var(--sc) 20%,#091216); --hero-line:color-mix(in srgb,var(--sc) 45%,#1A2B31);
+  --hero-ink:#F3F6F7; --hero-sub:color-mix(in srgb,var(--sc) 22%,#B9C8CB); --circle:color-mix(in srgb,var(--sc) 55%,#091216);
+  --t1:color-mix(in srgb,var(--sc) 24%,#0F1B20); --t2:color-mix(in srgb,var(--sc) 18%,#0F1B20);
+}
+:root[data-subj]:not([data-subj=""]) body{background:radial-gradient(circle at 88% 0%,color-mix(in srgb,var(--sc) 45%,transparent) 0%,transparent 45%),linear-gradient(160deg,color-mix(in srgb,var(--sc) 20%,var(--bg)) 0%,var(--bg) 50%,color-mix(in srgb,var(--sc) 14%,var(--bg)) 100%);background-attachment:fixed}
 body::before{background:var(--bg)}
 h1{font-weight:700;letter-spacing:-.02em}
 .eyebrow{letter-spacing:.14em;color:var(--soft);font-weight:600}
@@ -383,7 +403,7 @@ h1{font-weight:700;letter-spacing:-.02em}
 .side .navh{font-family:var(--f-body);font-size:.64rem;letter-spacing:.18em;text-transform:uppercase;font-weight:700;color:var(--soft);padding:14px 14px 8px}
 .side .navh:first-child{padding-top:0}
 .side a,.side .naddbtn{gap:12px;padding:11px 14px;border-radius:14px;color:var(--nav-ink);font-weight:500;font-size:.95rem}
-.side a:hover{background:var(--surface-2);color:var(--accent)}
+.side a:hover{background:var(--surface-2);color:var(--ink)}
 .side .naddbtn{color:var(--soft);font-size:.86rem}
 .side .naddbtn:hover{color:var(--accent)}
 .side .ni{width:19px;height:19px;stroke-width:1.9}
