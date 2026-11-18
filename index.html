@@ -307,29 +307,257 @@ img{max-width:100%}
 .verdict.ok{color:var(--ok)} .verdict.bad{color:var(--bad)}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 @media (max-width:420px){.row2{grid-template-columns:1fr}}
+
+/* ===== Study Studio theme (deep teal #17404E) ===== */
+:root{
+  --bg:#F6F8F5; --surface:#FFFEFB; --surface-2:#EDF4F0; --ink:#1D3940; --muted:#6C8382; --line:#E4ECE8;
+  --visor:#17404E; --visor-ink:#E9F5EF; --glow:#9ADCC6; --accent:#17404E; --on-accent:#FFFFFF; --prog:#4C9B86;
+  --ok:#2E816A; --ok-bg:#E1F2E8; --warn:#A4752B; --warn-bg:#FCF1DA; --bad:#B5483F; --bad-bg:#FBE6E2;
+  --halo:#DDECDF; --hero-a:#D3E7DF; --hero-b:#E2F0E6; --hero-c:#F3F1E3; --hero-line:#D6E8DF; --hero-ink:#17404E; --hero-sub:#54716E; --circle:#A9CEC1;
+  --nav-on:#E1EFE9; --nav-ink:#74888B; --soft:#A7B5B1; --t1:#E4F0E9; --t2:#DEF1E7; --t3:#FFF1DF;
+  --dot:transparent; --shadow:0 14px 42px rgba(23,64,78,.055); --r:20px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0B1C21; --surface:#112A31; --surface-2:#173740; --ink:#E3F0EC; --muted:#8FAAA6; --line:#1F434C;
+  --visor:#0E3440; --visor-ink:#E3F0EC; --glow:#7FD1B8; --accent:#7FD1B8; --on-accent:#0B1C21; --prog:#7FD1B8;
+  --ok:#6FD0A6; --ok-bg:#12372C; --warn:#E9BC6E; --warn-bg:#3A2E14; --bad:#F08A80; --bad-bg:#3E1D1B;
+  --halo:#123A3A; --hero-a:#14424A; --hero-b:#123A40; --hero-c:#1A3A33; --hero-line:#1F4D52; --hero-ink:#E9F5EF; --hero-sub:#A9C7C0; --circle:#2A6A66;
+  --nav-on:rgba(127,209,184,.14); --nav-ink:#93ABA7; --soft:#6F8C88; --t1:#173F45; --t2:#163E36; --t3:#3A3220;
+  --dot:transparent; --shadow:0 14px 42px rgba(0,0,0,.28); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0B1C21; --surface:#112A31; --surface-2:#173740; --ink:#E3F0EC; --muted:#8FAAA6; --line:#1F434C;
+  --visor:#0E3440; --visor-ink:#E3F0EC; --glow:#7FD1B8; --accent:#7FD1B8; --on-accent:#0B1C21; --prog:#7FD1B8;
+  --ok:#6FD0A6; --ok-bg:#12372C; --warn:#E9BC6E; --warn-bg:#3A2E14; --bad:#F08A80; --bad-bg:#3E1D1B;
+  --halo:#123A3A; --hero-a:#14424A; --hero-b:#123A40; --hero-c:#1A3A33; --hero-line:#1F4D52; --hero-ink:#E9F5EF; --hero-sub:#A9C7C0; --circle:#2A6A66;
+  --nav-on:rgba(127,209,184,.14); --nav-ink:#93ABA7; --soft:#6F8C88; --t1:#173F45; --t2:#163E36; --t3:#3A3220;
+  --dot:transparent; --shadow:0 14px 42px rgba(0,0,0,.28); color-scheme:dark}
+body{background:radial-gradient(circle at 82% 2%,var(--halo) 0%,transparent 25%),var(--bg);background-attachment:fixed;font-size:14.5px}
+body::before{background:var(--bg)}
+h1{font-weight:700;letter-spacing:-.02em}
+.eyebrow{letter-spacing:.14em;color:var(--soft);font-weight:600}
+
+/* layout: sidebar | main | rail */
+.layout{grid-template-columns:246px minmax(0,1fr) 286px;gap:24px;max-width:1630px;padding:23px 25px 60px;align-items:start}
+.layout.norail{grid-template-columns:246px minmax(0,1fr);max-width:1400px}
+.maincol{min-width:0;display:flex;flex-direction:column}
+.sidebar{background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow);border-radius:28px;position:sticky;top:23px;
+  height:calc(100vh - 46px);min-height:560px;padding:24px 14px 16px;display:flex;flex-direction:column;overflow-y:auto;scrollbar-width:thin}
+.sidebar > .brand{padding:0 10px;margin:0 0 30px}
+.brand b{font-size:1.15rem;font-weight:700;letter-spacing:-.02em}
+.brand small{letter-spacing:.2em;color:var(--soft);font-weight:600;font-size:.62rem;margin-top:2px}
+.brandMark svg{width:39px;height:39px;display:block}
+.spacer{flex:1;min-height:16px}
+.sidetip{background:linear-gradient(133deg,var(--hero-a),var(--hero-c));border-radius:18px;margin:0 3px 4px;padding:17px 15px}
+.sidetip b{display:block;font-size:.9rem;line-height:1.4;color:var(--hero-ink)}
+.sidetip p{font-size:.78rem;line-height:1.5;color:var(--hero-sub);margin:6px 0 11px}
+.sidetip a{display:inline-block;background:var(--surface);border:1px solid var(--line);border-radius:12px;color:var(--accent);padding:8px 12px;font-size:.78rem;font-weight:700;text-decoration:none}
+
+/* sidebar nav (light) */
+.side{background:none;border:0;border-radius:0;padding:0;max-height:none;overflow:visible;position:static;gap:3px;align-items:stretch;align-self:stretch}
+.side .navh{font-family:var(--f-body);font-size:.64rem;letter-spacing:.18em;text-transform:uppercase;font-weight:700;color:var(--soft);padding:14px 14px 8px}
+.side .navh:first-child{padding-top:0}
+.side a,.side .naddbtn{gap:12px;padding:11px 14px;border-radius:14px;color:var(--nav-ink);font-weight:500;font-size:.95rem}
+.side a:hover{background:var(--surface-2);color:var(--accent)}
+.side .naddbtn{color:var(--soft);font-size:.86rem}
+.side .naddbtn:hover{color:var(--accent)}
+.side .ni{width:19px;height:19px;stroke-width:1.9}
+.side a[aria-current="page"],.side a.subj-on{background:var(--nav-on);color:var(--accent);font-weight:700}
+.side a[aria-current="page"] .cnt{color:var(--accent)}
+.side .badge{min-width:22px;height:22px;padding:0 7px;background:var(--t1);color:var(--accent);box-shadow:none;font-size:.72rem;font-weight:700}
+.side .sub{margin:2px 0 8px 23px;padding-left:12px;border-left:1.5px solid var(--line)}
+.side .sub a{padding:7px 11px;font-size:.86rem;color:var(--nav-ink)}
+.side .sub a[aria-current="page"]{background:var(--surface-2);color:var(--ink);font-weight:600}
+.side .sub .cnt{color:var(--soft)}
+.side .nempty{color:var(--soft)}
+.side .addsub input{background:var(--surface);border-color:var(--line);color:var(--ink)}
+
+/* top bar */
+.top{position:static;background:transparent;border:0;padding:0!important;margin:2px 0 22px;min-height:50px;justify-content:flex-end;gap:10px}
+.top > .brand{display:none;margin-right:auto}
+.top .btn{height:42px;border-radius:13px;background:var(--surface);border:1px solid var(--line);color:var(--muted);padding:0 14px}
+.top .btn:hover{color:var(--accent);border-color:var(--accent)}
+.top .themebtn{width:42px;padding:0}
+.greet .gb{background:var(--visor);color:var(--visor-ink);box-shadow:0 8px 18px rgba(23,64,78,.18);border-radius:14px;border-top-right-radius:4px}
+.greet .gb small{color:color-mix(in srgb,var(--visor-ink) 70%,transparent)}
+
+/* surfaces */
+.card{border-radius:21px;padding:20px 22px}
+.composer{border-color:var(--line)}
+.btn{border-radius:12px;font-weight:600}
+.btn.primary{box-shadow:0 8px 18px rgba(23,64,78,.18)}
+.f input,.f textarea,.f select,input.t,.datectl input{border-radius:12px;background:var(--surface)}
+.bar{height:7px;background:var(--surface-2)}
+.bar i{background:var(--prog)}
+.tick{border-radius:8px;width:26px;height:26px}
+.tick:checked{background:var(--prog);border-color:var(--prog)}
+.tick:checked::after{width:7px;height:12px}
+.banner{background:var(--surface);color:var(--ink);border:1px solid var(--line);box-shadow:var(--shadow);border-radius:21px}
+.banner .big{color:var(--accent)}
+.banner .muted{color:var(--muted)}
+.banner .bar{background:var(--surface-2)}
+.banner .bar i{background:var(--prog)}
+.tablewrap{border-radius:21px;box-shadow:var(--shadow)}
+th{font-family:var(--f-body);font-weight:700;color:var(--soft)}
+.empty{border-radius:21px;background:var(--surface)}
+.tag{font-family:var(--f-body);font-weight:700;border-radius:8px;border:0;background:var(--t1);padding:3px 8px}
+.chip{font-weight:600}
+.pills a[aria-current="page"]{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.reg{border-radius:25px;background:linear-gradient(111deg,var(--visor),color-mix(in srgb,var(--visor) 80%,#2E816A))}
+.reg p{color:color-mix(in srgb,var(--visor-ink) 78%,transparent)}
+.reg .f{color:color-mix(in srgb,var(--visor-ink) 70%,transparent)}
+.reg .f input{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.2);color:#fff}
+.reg .btn.primary,.hello .btn.primary{background:var(--glow);border-color:var(--glow);color:#0B2A33}
+.authtabs{background:rgba(0,0,0,.2)}
+.authtabs button{color:color-mix(in srgb,var(--visor-ink) 70%,transparent)}
+.authtabs button.on{background:var(--glow);color:#0B2A33}
+.stutabs{background:var(--surface-2)}
+.stutabs button{color:var(--muted)}
+.stutabs button.on{background:var(--accent);color:var(--on-accent)}
+.toast{background:var(--visor);color:var(--visor-ink);border-radius:14px;box-shadow:0 15px 45px rgba(23,64,78,.25)}
+.runstat{top:0}
+
+/* home: hero, stats, subjects */
+.hero{min-height:200px;position:relative;overflow:hidden;display:flex;align-items:center;border-radius:25px;padding:27px 30px;
+  background:linear-gradient(111deg,var(--hero-a) 0%,var(--hero-b) 57%,var(--hero-c) 100%);border:1px solid var(--hero-line)}
+.hero-content{position:relative;z-index:2;max-width:60%}
+.eyebrow-pill{display:inline-flex;align-items:center;gap:7px;background:color-mix(in srgb,var(--surface) 70%,transparent);border-radius:999px;padding:6px 11px;color:var(--hero-ink);font-size:.7rem;font-weight:700;letter-spacing:.06em}
+.eyebrow-pill i{height:6px;width:6px;border-radius:50%;background:var(--prog)}
+.hero h2{font-weight:700;font-size:clamp(1.45rem,2.15vw,2.1rem);line-height:1.2;letter-spacing:-.02em;margin:14px 0 8px;color:var(--hero-ink)}
+.hero p{font-size:.86rem;color:var(--hero-sub);line-height:1.6;max-width:360px;margin:0 0 16px}
+.hero .btn.primary{background:var(--visor);border-color:var(--visor);color:#fff}
+.hero-art{position:absolute;right:23px;top:50%;transform:translateY(-50%);width:250px;height:200px}
+.hero-art .circle{position:absolute;right:30px;top:12px;height:176px;width:176px;border-radius:50%;background:var(--circle);
+  box-shadow:0 0 0 18px color-mix(in srgb,var(--surface) 16%,transparent),0 0 0 36px color-mix(in srgb,var(--surface) 9%,transparent);display:grid;place-items:center}
+.hero-art .circle svg{width:120px;height:138px}
+.float-tag{position:absolute;padding:9px 13px;background:var(--surface);border-radius:13px;box-shadow:0 9px 25px rgba(23,64,78,.14);font-size:.76rem;font-weight:700;color:var(--hero-ink);white-space:nowrap}
+.tag-one{top:20px;right:0;transform:rotate(9deg)}
+.tag-two{bottom:20px;left:0;transform:rotate(-8deg);color:var(--ok)}
+.sechead{display:flex;justify-content:space-between;align-items:center;margin:6px 0 -6px;gap:8px}
+.sechead h3{font-size:1.05rem;font-weight:700;letter-spacing:-.01em}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}
+.stat{background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow);border-radius:19px;min-height:116px;padding:17px;display:flex;flex-direction:column;justify-content:space-between;gap:10px;min-width:0}
+.stat .st{display:flex;align-items:center;justify-content:space-between;gap:6px;color:var(--muted);font-size:.76rem;font-weight:600}
+.stat .si{height:34px;width:34px;display:grid;place-items:center;border-radius:12px;flex:0 0 auto}
+.stat .si svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.si.c1{background:var(--warn-bg);color:var(--warn)} .si.c2{background:var(--t1);color:var(--accent)} .si.c3{background:var(--ok-bg);color:var(--ok)}
+.stat strong{font-size:1.7rem;letter-spacing:-.03em;font-weight:700;line-height:1}
+.stat strong span{font-size:.82rem;letter-spacing:0;font-weight:600;color:var(--muted)}
+.stat small{font-size:.72rem;color:var(--soft);font-weight:600}
+.subjects{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:13px}
+.scard{background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow);border-radius:19px;padding:17px;min-width:0;position:relative;overflow:hidden;
+  text-decoration:none;color:var(--ink);transition:transform .2s,box-shadow .2s;display:flex;flex-direction:column}
+.scard:hover{transform:translateY(-3px);box-shadow:0 15px 26px rgba(23,64,78,.12)}
+.scard .sic{height:44px;width:44px;display:grid;place-items:center;border-radius:14px;margin-bottom:14px;color:var(--accent);background:var(--t1)}
+.scard:nth-child(3n+2) .sic{background:var(--t2);color:var(--ok)} .scard:nth-child(3n) .sic{background:var(--t3);color:var(--warn)}
+.scard .sic .ni{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.scard b{font-size:.92rem;font-weight:700;margin-bottom:4px}
+.scard p{font-size:.76rem;color:var(--muted);margin:0 0 12px}
+.scard .bar{margin-top:auto;height:6px}
+.scard .pct{position:absolute;right:16px;top:20px;color:var(--soft);font-size:.72rem;font-weight:700}
+
+/* rail */
+.rail{display:flex;flex-direction:column;gap:17px;position:sticky;top:23px}
+.rbox{background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow);border-radius:21px;padding:20px}
+.rbox h3{font-size:.98rem;font-weight:700;margin-bottom:4px}
+.rbox .lbl{color:var(--muted);font-size:.78rem;margin-bottom:14px}
+.week{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
+.week .wl{font-size:.64rem;color:var(--soft);margin-bottom:6px;font-weight:600}
+.week button{height:34px;border:0;background:none;border-radius:11px;font-size:.8rem;font-weight:700;color:var(--ink);cursor:pointer;position:relative;padding:0}
+.week button:hover{background:var(--surface-2)}
+.week button.now{box-shadow:inset 0 0 0 1.5px var(--prog)}
+.week button.sel{background:var(--visor);color:#fff}
+.week button.done::after{content:"";position:absolute;left:50%;bottom:3px;width:4px;height:4px;margin-left:-2px;border-radius:50%;background:var(--prog)}
+.week button.sel.done::after{background:var(--glow)}
+.upc{margin-top:16px;border-top:1px solid var(--line);padding-top:14px;display:flex;align-items:center;gap:10px;min-width:0}
+.upc .ui{height:40px;width:40px;border-radius:12px;background:var(--warn-bg);display:grid;place-items:center;font-size:1.1rem;flex:0 0 auto}
+.upc b{display:block;font-size:.8rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.upc small{display:block;color:var(--muted);margin-top:3px;font-size:.74rem}
+.upc > div{min-width:0}
+.novacard{border-radius:22px;padding:18px;background:linear-gradient(138deg,var(--hero-a),var(--hero-c) 83%);border:1px solid var(--hero-line);position:relative;overflow:hidden}
+.novacard::after{content:"✦";position:absolute;top:11px;right:17px;color:var(--prog);font-size:22px;opacity:.7}
+.novacard .nic{height:46px;width:46px;border-radius:15px;background:var(--visor);display:grid;place-items:center;box-shadow:0 9px 17px rgba(23,64,78,.18)}
+.novacard .nic svg{width:34px;height:38px}
+.novacard h3{font-size:1rem;margin:12px 0 6px;color:var(--hero-ink)}
+.novacard p{font-size:.8rem;color:var(--hero-sub);line-height:1.6;margin:0 0 14px}
+.novacard .btn{background:var(--surface);border:0;color:var(--accent);box-shadow:0 4px 10px rgba(23,64,78,.08)}
+
+@media (min-width:821px){ .side > a,.side .sub a{width:100%} }
+/* mobile bottom bar */
+.mbar{display:none}
+@media (max-width:1370px){ .layout{grid-template-columns:223px minmax(0,1fr) 264px;gap:16px;padding:18px 18px 60px} .layout.norail{grid-template-columns:223px minmax(0,1fr)} .sidebar{top:18px;height:calc(100vh - 36px)} }
+@media (max-width:1130px){
+  .layout,.layout.norail{grid-template-columns:210px minmax(0,1fr)}
+  .rail{grid-column:2;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));position:static;align-items:start}
+}
+@media (max-width:820px){
+  .layout,.layout.norail{grid-template-columns:minmax(0,1fr);display:flex;flex-direction:column;gap:14px;padding:14px max(14px,env(safe-area-inset-left,0px)) 100px}
+  .sidebar{position:static;height:auto;min-height:0;padding:6px;border-radius:16px;overflow:hidden;order:2;min-width:0;max-width:100%}
+  .top,#main,.rail{min-width:0;max-width:100%}
+  .top{flex-wrap:wrap}
+  .maincol{display:contents}
+  .top{order:1;margin:0}
+  #main{order:3}
+  .rail{order:4}
+  .sidebar > .brand,.sidebar .spacer,.sidetip{display:none}
+  .top > .brand{display:flex}
+  .side{flex-direction:row;overflow-x:auto}
+  .side a{padding:8px 12px}
+  .rail{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .hero{padding:22px}
+  .hero-content{max-width:66%}
+  .hero-art{transform:translateY(-50%) scale(.72);transform-origin:right center;right:-30px}
+  .mbar{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;align-items:center;justify-content:space-around;background:var(--surface);border-top:1px solid var(--line);
+    padding:8px 10px calc(8px + env(safe-area-inset-bottom,0px));box-shadow:0 -6px 25px rgba(23,64,78,.07)}
+  .mbar a,.mbar button{display:flex;flex-direction:column;align-items:center;gap:4px;border:0;background:none;color:var(--soft);font-size:.66rem;font-weight:700;padding:4px 10px;text-decoration:none;cursor:pointer}
+  .mbar .on{color:var(--accent)}
+  .mbar .ni{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .toast{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+}
+@media (max-width:560px){
+  .hero{min-height:190px;padding:20px 17px}
+  .hero-content{max-width:72%}
+  .hero p{font-size:.78rem}
+  .hero-art{transform:translateY(-50%) scale(.5);right:-70px}
+  .stats{gap:8px}
+  .stat{min-height:100px;padding:11px 10px}
+  .stat .si{height:28px;width:28px;border-radius:10px}
+  .stat strong{font-size:1.3rem}
+  .stat small{display:none}
+  .rail{grid-template-columns:minmax(0,1fr)}
+  .subjects{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+}
+body.authmode .sidebar,body.authmode .rail,body.authmode #main,body.authmode .mbar{display:none!important}
+body.authmode .layout{grid-template-columns:minmax(0,1fr);max-width:900px}
+body.authmode .top > .brand{display:flex}
+body.authmode .authwrap{min-height:calc(100vh - 160px);padding:0}
 </style>
 </head>
 <body>
 
-<header class="top">
-  <a class="brand" href="#plan" aria-label="LEVEL UP: күндік жоспар">
-    <span id="brandMark"></span>
-    <span><b>LEVEL UP</b><small>IT · оқу платформасы</small></span>
-  </a>
-  <button id="previewBtn" class="btn sm" hidden>Оқушы көрінісі</button>
-  <button id="themeBtn" class="btn sm ghost themebtn" aria-label="Түнгі / күндізгі режим"></button>
-  <button id="logoutBtn" class="btn sm ghost" hidden>Шығу</button>
-  <button class="greet" id="greet" aria-label="NOVA көмекшісін ашу">
-    <span class="gb"><b id="gTitle">Сәлем! Мен — NOVA</b><small id="gSub">Іске қосылып жатырмын…</small></span>
-    <span id="gBot"></span>
-  </button>
-</header>
-
-<section class="authwrap" id="auth" hidden></section>
-<div class="layout">
-  <nav class="side" id="nav" aria-label="Бөлімдер мен пәндер"></nav>
-  <main id="main"></main>
+<div class="layout norail" id="layout">
+  <aside class="sidebar" aria-label="Мәзір">
+    <a class="brand" href="#plan" aria-label="LEVEL UP: басты бет"><span class="brandMark"></span><span><b>LEVEL UP</b><small>Study studio</small></span></a>
+    <nav class="side" id="nav" aria-label="Бөлімдер мен пәндер"></nav>
+    <div class="spacer"></div>
+    <div class="sidetip"><b>Кішкентай қадам — үлкен нәтиже.</b><p>Бүгін бір тапсырма орындап, мақсатыңа жақындай түс.</p><a href="#plan">Бүгінгі жоспар →</a></div>
+  </aside>
+  <div class="maincol">
+    <header class="top">
+      <a class="brand" href="#plan" aria-label="LEVEL UP: басты бет"><span class="brandMark"></span><span><b>LEVEL UP</b><small>Study studio</small></span></a>
+      <button id="previewBtn" class="btn sm" hidden>Оқушы көрінісі</button>
+      <button id="themeBtn" class="btn sm ghost themebtn" aria-label="Түнгі / күндізгі режим"></button>
+      <button id="logoutBtn" class="btn sm ghost" hidden>Шығу</button>
+      <button class="greet" id="greet" aria-label="NOVA көмекшісін ашу">
+        <span class="gb"><b id="gTitle">Сәлем! Мен — NOVA</b><small id="gSub">Іске қосылып жатырмын…</small></span>
+        <span id="gBot"></span>
+      </button>
+    </header>
+    <section class="authwrap" id="auth" hidden></section>
+    <main id="main"></main>
+  </div>
+  <aside class="rail" id="rail" hidden aria-label="Апта және NOVA"></aside>
 </div>
+<nav class="mbar" id="mbar" aria-label="Мобильді навигация"></nav>
 
 <aside class="hpanel" id="hpanel" hidden aria-label="NOVA көмекшісі">
   <header><span id="hpBot"></span><span><b>NOVA</b><small>LEVEL UP көмекшісі</small></span><button id="hpClose" aria-label="Жабу">×</button></header>
@@ -539,7 +767,7 @@ function fileUrl(bucket, path){ return (path && S.urls[(bucket === 'materials' ?
 /* ---------- auth ---------- */
 function setAuthView(on){
   $('#auth').hidden = !on;
-  $('.layout').hidden = on;
+  document.body.classList.toggle('authmode', on);
   $('#greet').hidden = on;
   $('#logoutBtn').hidden = on;
   if (on){ $('#previewBtn').hidden = true; $('#hpanel').hidden = true; }
@@ -598,7 +826,7 @@ async function startSession(session){
 /* ---------- boot ---------- */
 async function boot(){
   $('#gBot').innerHTML = bot(); $('#hpBot').innerHTML = bot();
-  $('#brandMark').innerHTML = `<svg viewBox="0 0 40 40" width="34" height="34" aria-hidden="true"><rect x="2" y="6" width="36" height="28" rx="11" style="fill:var(--visor)"/><path d="M11 20a4 4 0 0 1 8 0z M21 20a4 4 0 0 1 8 0z" style="fill:var(--glow)"/><path d="M16 25h8a4 4 0 0 1-8 0z" style="fill:var(--glow)"/></svg>`;
+  document.querySelectorAll('.brandMark').forEach(el => el.innerHTML = `<svg viewBox="0 0 40 40" aria-hidden="true"><rect width="40" height="40" rx="13" style="fill:var(--visor)"/><rect x="7" y="11" width="26" height="19" rx="8" fill="#0B2A33"/><path d="M12 20a3.2 3.2 0 0 1 6.4 0z M21.6 20a3.2 3.2 0 0 1 6.4 0z" fill="#9ADCC6"/><path d="M17 24h6a3 3 0 0 1-6 0z" fill="#9ADCC6"/></svg>`);
   route();
   if (!sb){ S.role = 'anon'; setAuthView(true); renderAuth(); return; }
   const { data } = await sb.auth.getSession();
@@ -657,6 +885,10 @@ const ICONS = {
   book:'<path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM4 21V5M8 7h7"/>',
   users:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M21.5 20a6.5 6.5 0 0 0-4-6"/>',
   plus:'<path d="M12 5v14M5 12h14"/>',
+  flame:'<path d="M12 22a7 7 0 0 0 7-7c0-3.5-2.5-6-4-7-1 3-4-1-4-5-4 3-6 7-6 12a7 7 0 0 0 7 7Z"/>',
+  check:'<path d="m4 12 5 5L20 6"/>',
+  chart:'<path d="M3 3v18h18M7 17v-6M12 17V7M17 17V4"/>',
+  bot:'<rect x="3" y="7" width="18" height="14" rx="5"/><path d="M12 3v4M9 3h6M8 13h.01M16 13h.01M9 17c1.5 1.3 4.5 1.3 6 0"/>',
   redo:'<path d="M4 12a8 8 0 1 0 2.3-5.6M4 4v4.5h4.5"/><path d="M9.5 12.5l2 2 3.5-4"/>',
 };
 const ico = k => `<svg class="ni" viewBox="0 0 24 24" aria-hidden="true">${ICONS[k] || ICONS.book}</svg>`;
@@ -681,6 +913,11 @@ function renderNav(){
     h += `<p class="navh">Басқару</p><a href="#students" ${S.view==='students' ? 'aria-current="page"' : ''}>${ico('users')}<span class="nl">Оқушылар</span>${badge(Object.keys(S.students).length)}</a>`;
   }
   $('#nav').innerHTML = h;
+  const fs = subs[0], mb = $('#mbar');
+  if (mb) mb.innerHTML = `<a href="#plan" class="${S.view==='plan'?'on':''}">${ico('home')}Басты бет</a>`
+    + (fs ? `<a href="#s-${esc(fs.id)}-${esc((secs(fs.id)[0] || {}).id || 'analysis')}" class="${S.view==='subject'?'on':''}">${ico('book')}Пәндер</a>` : '')
+    + (r === 'curator' ? `<a href="#students" class="${S.view==='students'?'on':''}">${ico('users')}Оқушылар</a>` : `<a href="#mistakes" class="${S.view==='mistakes'?'on':''}">${ico('redo')}Қателер</a>`)
+    + `<button type="button" data-act="open-nova">${ico('bot')}NOVA</button>`;
   if (S.addingSubject){ const i = $('#subjName'); if (i) i.focus(); }
 }
 
@@ -706,6 +943,7 @@ function renderShell(){
   }
 
   if (v === 'plan'){
+    html += `<section class="hero" id="hero"></section><div class="stats" id="stats"></div>`;
     html += `<section class="vhead"><div><p class="eyebrow">Күндік жоспар</p><h1 id="planTitle">${esc(fmtDate(S.date))}</h1><p class="lead">Куратор жариялаған тапсырмаларды дедлайнға дейін орындап, белгі қойып, дәлел жүкте.</p></div>
       <div class="datectl"><button class="btn sm" data-act="day" data-d="-1" aria-label="Алдыңғы күн">‹</button><input type="date" id="planDate" value="${S.date}" aria-label="Күнді таңдау"><button class="btn sm" data-act="day" data-d="1" aria-label="Келесі күн">›</button><button class="btn sm ghost" data-act="today">Бүгін</button></div></section>`;
     if (r === 'curator'){
@@ -722,7 +960,7 @@ function renderShell(){
         <div class="actions"><button class="btn primary" type="submit" data-mode="publish">Жариялау</button><button class="btn" type="submit" data-mode="draft">Жоба ретінде сақтау</button><span class="muted" style="font-size:.82rem">Жарияланған тапсырманы барлық оқушы бірден көреді.</span></div>
       </form><div id="draftList" class="list"></div>`;
     } else html += `<div id="deadline"></div>`;
-    html += `<div id="taskList" class="list"></div>`;
+    html += `<div id="taskList" class="list"></div><div class="sechead"><h3>${r === 'curator' ? 'Пәндер' : 'Менің пәндерім'}</h3></div><div class="subjects" id="subjCards"></div>`;
   } else if (v === 'subject'){
     const tb = curSec(), sid = S.subject;
     S.shellKey = tb ? `${sid}:${tb.id}:${tb.kind}` : `${sid}:none`;
@@ -799,7 +1037,8 @@ function renderData(){
   renderNav();
   if (needsReg()) return;
   const r = ROLE(), v = S.view;
-  if (v === 'plan') r === 'curator' ? renderPlanCurator() : renderPlanStudent();
+  renderRail();
+  if (v === 'plan'){ r === 'curator' ? renderPlanCurator() : renderPlanStudent(); renderHome(); }
   else if (v === 'subject'){
     const st = $('#subjTitle'); if (st) st.textContent = subjName(S.subject) || (S.subjects.length ? 'Пән табылмады' : '…');
     const cs = curSec();
@@ -1101,6 +1340,78 @@ function renderStudents(){
   </article>`;
 }
 
+
+/* ---------- Study Studio home ---------- */
+const SI = k => `<svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[k]}</svg>`;
+function streakDays(){
+  const m = MY(), t0 = today(); let n = 0, d = t0;
+  const by = {}; S.tasks.forEach(t => { (by[t.date] = by[t.date] || []).push(t); });
+  const first = Object.keys(by).sort()[0]; if (!first) return 0;
+  for (let i = 0; i < 400 && d >= first; i++, d = shiftDate(d, -1)){
+    const ts = by[d]; if (!ts) continue;
+    if (ts.every(t => m.tasks?.[t.id]?.done)) n++;
+    else if (d !== t0) break;
+  }
+  return n;
+}
+function testAvg(p){ const ts = Object.values((p && p.tests) || {}).filter(x => x && x.total); return ts.length ? { avg: Math.round(ts.reduce((a, x) => a + pct(x.score, x.total), 0) / ts.length), n: ts.length } : null; }
+function renderHome(){
+  const hero = $('#hero'), st = $('#stats'), sc = $('#subjCards'); if (!hero) return;
+  const cur = ROLE() === 'curator', t = pubTasks(today()), m = MY();
+  const name = cur ? (S.myName || 'куратор') : (S.preview ? 'оқушы' : ((S.me && (S.me.first || firstName(S.me.name))) || ''));
+  const done = t.filter(x => m.tasks?.[x.id]?.done).length;
+  const studs = cur ? studentList() : [];
+  const avgDone = cur && t.length && studs.length ? Math.round(studs.reduce((a, s) => a + pct(t.filter(x => S.progress[s.id]?.tasks?.[x.id]?.done).length, t.length), 0) / studs.length) : 0;
+  const sub = cur
+    ? (t.length ? `Бүгін ${t.length} тапсырма жарияланды. Оқушылар орташа есеппен ${avgDone}% орындады.` : 'Бүгінге әлі тапсырма жарияланбаған. Төмендегі формадан қосыңыз.')
+    : (t.length ? (done === t.length ? 'Бүгінгі жоспар толық орындалды. Жарайсың!' : `Бүгін ${t.length} тапсырманың ${done}-і орындалды. Әр күнің — жаңа нұсқаңа жасалған кішкентай қадам.`) : 'Бүгінге тапсырма әзірге жоқ. Пәндердегі материалдарды қайталап ал.');
+  hero.innerHTML = `<div class="hero-content"><span class="eyebrow-pill"><i></i>${esc(fmtDate(today()).toUpperCase())}</span>
+      <h2>Сәлем, ${esc(name || 'досым')}!</h2><p>${esc(sub)}</p>
+      <button class="btn primary" data-act="jump-tasks">${cur ? 'Тапсырма қосу →' : 'Бүгінгі жоспарым →'}</button></div>
+    <div class="hero-art" aria-hidden="true"><div class="circle">${bot()}</div><div class="float-tag tag-one">✦ 140 балл</div>${t.length ? `<div class="float-tag tag-two">${cur ? `${avgDone}% орындалды` : `${done}/${t.length} бүгін ✓`}</div>` : ''}</div>`;
+  const stat = (lbl, icon, cls, val, foot) => `<div class="stat"><div class="st"><span>${lbl}</span><span class="si ${cls}">${SI(icon)}</span></div><strong>${val}</strong>${foot}</div>`;
+  if (cur){
+    st.innerHTML = stat('Бүгінгі тапсырма', 'check', 'c2', `${t.length}`, `<small>${S.drafts.filter(d => d.date === today()).length} жоба сақтаулы</small>`)
+      + stat('Оқушылар', 'users', 'c1', `${studs.length}`, '<small>тіркелген</small>')
+      + stat('Бүгін орындалды', 'chart', 'c3', `${avgDone}%`, `<div class="bar"><i style="width:${avgDone}%"></i></div>`);
+  } else {
+    const sk = streakDays(), ta = testAvg(m), mist = Object.keys(m.mistakes || {}).length;
+    st.innerHTML = stat('Қатарынан', 'flame', 'c1', `${sk} <span>күн</span>`, '<small>жоспар толық орындалған күндер</small>')
+      + stat('Бүгін', 'check', 'c2', t.length ? `${done}<span>/${t.length}</span>` : '—', `<div class="bar"><i style="width:${pct(done, t.length)}%"></i></div>`)
+      + stat('Тест орташа', 'chart', 'c3', ta ? `${ta.avg}%` : '—', `<small>${ta ? ta.n + ' тест' : 'әлі тест жоқ'}${mist ? ' · ' + mist + ' қате' : ''}</small>`);
+  }
+  if (sc){
+    const subs = subjects();
+    sc.innerHTML = subs.map(s => {
+      const tests = S.tests.filter(x => x.subject === s.id), mats = S.materials.filter(x => x.subject === s.id).length, cls = S.checklists.filter(x => x.subject === s.id).length;
+      const taken = tests.filter(x => m.tests?.[x.id]).length, v = pct(taken, tests.length);
+      const href = `#s-${esc(s.id)}-${esc((secs(s.id)[0] || {}).id || 'analysis')}`;
+      return `<a class="scard" href="${href}"><span class="sic">${ico(s.id)}</span><b>${esc(s.name)}</b>
+        <p>${tests.length} тест · ${mats} материал${cls ? ` · ${cls} чек-лист` : ''}</p>
+        ${!cur && tests.length ? `<span class="pct num">${v}%</span><div class="bar"><i style="width:${v}%"></i></div>` : ''}</a>`;
+    }).join('') || emptyBox('Пән әлі қосылмаған.');
+  }
+}
+function renderRail(){
+  const rail = $('#rail'), lay = $('#layout'); if (!rail) return;
+  const on = S.view === 'plan' && !needsReg() && S.role !== 'anon';
+  rail.hidden = !on; if (lay) lay.classList.toggle('norail', !on);
+  if (!on) return;
+  const cur = ROLE() === 'curator', m = MY(), t0 = today();
+  const d = parseD(S.date), dow = (d.getDay() + 6) % 7; d.setDate(d.getDate() - dow);
+  const days = Array.from({ length:7 }, (_, i) => { const x = new Date(d); x.setDate(d.getDate() + i); return ymd(x); });
+  const WL = ['Дс','Сс','Ср','Бс','Жм','Сб','Жс'];
+  const dayDone = ds => { const ts = pubTasks(ds); return ts.length && (cur || ts.every(x => m.tasks?.[x.id]?.done)); };
+  const now = Date.now();
+  const up = S.tasks.filter(x => dueOf(x) > now && (cur || !m.tasks?.[x.id]?.done)).sort((a, b) => dueOf(a) - dueOf(b))[0];
+  const md = parseD(S.date);
+  rail.innerHTML = `<section class="rbox"><h3>${cur ? 'Апта' : 'Менің аптам'}</h3><p class="lbl">${MONTHS[md.getMonth()][0].toUpperCase() + MONTHS[md.getMonth()].slice(1)} ${md.getFullYear()}</p>
+      <div class="week">${WL.map(w => `<span class="wl">${w}</span>`).join('')}${days.map(ds => `<button type="button" data-act="goto-day" data-d="${ds}" class="${ds === S.date ? 'sel' : ''} ${ds === t0 ? 'now' : ''} ${dayDone(ds) ? 'done' : ''}" aria-label="${esc(fmtDate(ds))}">${+ds.slice(8)}</button>`).join('')}</div>
+      ${up ? `<div class="upc"><span class="ui">📝</span><div><b>${esc(up.title)}</b><small>Дедлайн: ${esc(ymd(new Date(dueOf(up))) === t0 ? 'бүгін, ' + fmtTime(dueOf(up)) : fmtDT(dueOf(up)))}</small></div></div>` : `<div class="upc"><span class="ui">✨</span><div><b>${cur ? 'Алдағы дедлайн жоқ' : 'Барлығы орындалды'}</b><small>Жаңа тапсырма осында шығады</small></div></div>`}
+    </section>
+    <section class="novacard"><span class="nic">${bot()}</span><h3>NOVA жанында ✨</h3><p>${cur ? 'Сайттың қай бөлімі не үшін екенін түсіндіріп берем.' : 'Қиын тақырып па, әлде мотивация керек пе? Мен әрдайым осындамын.'}</p><button class="btn sm" type="button" data-act="open-nova">NOVA-мен сөйлесу →</button></section>`;
+}
+
 /* ---------- helper panel ---------- */
 function renderHelper(){
   const r = S.role === 'curator' && !S.preview ? 'curator' : 'student';
@@ -1140,6 +1451,9 @@ document.addEventListener('click', async e => {
   const act = b.dataset.act;
   if (act === 'day'){ S.date = shiftDate(S.date, +b.dataset.d); syncDate(); return; }
   if (act === 'today'){ S.date = today(); syncDate(); return; }
+  if (act === 'goto-day'){ S.date = b.dataset.d; syncDate(); return; }
+  if (act === 'jump-tasks'){ const el = ROLE() === 'curator' ? $('#taskForm') : $('#taskList'); if (el) el.scrollIntoView({ behavior:'smooth', block:'start' }); return; }
+  if (act === 'open-nova'){ const p = $('#hpanel'); p.hidden = false; renderHelper(); return; }
   if (act === 'preview-off'){ setPreview(false); return; }
   if (act === 'add-subj'){ S.addingSubject = true; renderNav(); return; }
   if (act === 'add-sec'){ e.preventDefault(); S.secForm = 'add'; renderShell(); const i = $('#sName'); if (i) i.focus(); return; }
