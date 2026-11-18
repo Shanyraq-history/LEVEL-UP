@@ -161,6 +161,12 @@ tr.open td{background:color-mix(in srgb,var(--accent) 10%,var(--surface))}
 .cl-items .done span{text-decoration:line-through;color:var(--muted)}
 .q{display:flex;flex-direction:column;gap:6px;padding:12px 0;border-top:1px solid var(--line)}
 .q:first-child{border-top:0}
+.q > b{white-space:pre-line}
+.qimg{max-width:100%;max-height:340px;border-radius:10px;border:1px solid var(--line);align-self:flex-start;background:#fff}
+.qhint{font-size:.8rem}
+.mrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.mrow > span{min-width:120px;font-weight:600}
+.mrow select{flex:1;min-width:200px;max-width:100%}
 .opt{display:flex;gap:10px;align-items:center;padding:7px 10px;border:1px solid var(--line);border-radius:10px;cursor:pointer}
 .opt input{accent-color:var(--accent)}
 .opt.right{border-color:var(--ok);background:var(--ok-bg)}
@@ -880,6 +886,37 @@ function renderChecklists(){
   }).join('');
 }
 
+// Сұрақ түрлері: бір жауап {answer}, бірнеше жауап {answers:[..]}, сәйкестендіру {left:[..], pairs:[..]}; img — сурет сілтемесі
+const qKind = q => Array.isArray(q.pairs) ? 'match' : Array.isArray(q.answers) ? 'multi' : 'single';
+const qHead = (q, qi) => `<b>${qi+1}. ${esc(q.q)}</b>${(q.img ? [].concat(q.img) : []).map(u => `<img class="qimg" src="${esc(u)}" alt="" loading="lazy">`).join('')}`;
+const sameSet = (a, b) => Array.isArray(a) && Array.isArray(b) && a.length === b.length && [...a].sort().every((x, i) => x === [...b].sort()[i]);
+function qRight(q, a){
+  const k = qKind(q);
+  if (k === 'multi') return sameSet(a, q.answers);
+  if (k === 'match') return Array.isArray(a) && q.pairs.every((p, i) => a[i] === p);
+  return a === q.answer;
+}
+function qRead(f, q, qi){
+  const k = qKind(q);
+  if (k === 'multi') return [...f.querySelectorAll(`input[name=q${qi}]:checked`)].map(c => +c.value).sort((x, y) => x - y);
+  if (k === 'match') return q.left.map((_, li) => { const v = f.querySelector(`select[name=q${qi}_${li}]`)?.value; return v === '' || v == null ? -1 : +v; });
+  const c = f.querySelector(`input[name=q${qi}]:checked`); return c ? +c.value : -1;
+}
+function qRun(q, qi, d){
+  const k = qKind(q);
+  if (k === 'match') return `<div class="q">${qHead(q, qi)}<span class="muted qhint">Әр жолға сәйкес жауапты таңдаңыз</span>${q.left.map((l, li) => `<label class="mrow"><span>${esc(l)}</span><select name="q${qi}_${li}" required><option value="">— таңдаңыз —</option>${q.options.map((o, oi) => `<option value="${oi}" ${Array.isArray(d) && d[li]===oi ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select></label>`).join('')}</div>`;
+  if (k === 'multi') return `<div class="q">${qHead(q, qi)}<span class="muted qhint">Бірнеше дұрыс жауап бар</span>${q.options.map((o, oi) => `<label class="opt"><input type="checkbox" name="q${qi}" value="${oi}" ${Array.isArray(d) && d.includes(oi) ? 'checked' : ''}> ${esc(o)}</label>`).join('')}</div>`;
+  return `<div class="q">${qHead(q, qi)}${q.options.map((o, oi) => `<label class="opt"><input type="radio" name="q${qi}" value="${oi}" ${d===oi?'checked':''} required> ${esc(o)}</label>`).join('')}</div>`;
+}
+function qReview(q, qi, a){
+  const k = qKind(q);
+  if (k === 'match') return `<div class="q">${qHead(q, qi)}${q.left.map((l, li) => { const p = q.pairs[li], m = Array.isArray(a) ? a[li] : undefined;
+    return `<div class="opt ${m === undefined || m === p ? 'right' : 'wrong'}"><b>${esc(l)}</b> → ${esc(q.options[p] ?? '')}${m !== undefined && m !== p ? ` <span class="muted">(сіз: ${esc(q.options[m] ?? '—')})</span>` : ''}</div>`; }).join('')}</div>`;
+  const ok = k === 'multi' ? (oi => q.answers.includes(oi)) : (oi => oi === q.answer);
+  const picked = k === 'multi' ? (oi => Array.isArray(a) && a.includes(oi)) : (oi => a === oi);
+  return `<div class="q">${qHead(q, qi)}${q.options.map((o, oi) => `<div class="opt ${ok(oi) ? 'right' : (picked(oi) ? 'wrong' : '')}">${esc(o)}</div>`).join('')}</div>`;
+}
+
 function renderTests(){
   const el = $('#testList'); if (!el) return;
   const items = S.tests.filter(t => t.subject === S.subject && (t.section || 'tests') === S.tab).sort((a,b) => (a.createdAt||0) - (b.createdAt||0));
@@ -893,7 +930,7 @@ function renderTests(){
         <p class="muted" style="font-size:.88rem">Тапсырған: ${res.length}/${studs.length}${res.length ? ' · орташа ' + Math.round(res.reduce((a,o)=>a+pct(o.x.score,o.x.total),0)/res.length) + '%' : ''}</p>
         ${res.length ? `<div class="who">${res.map(o => `<div class="who-row"><span>${esc(o.s.name)} <span class="muted">${o.x.at ? fmtDT(o.x.at) : ''}</span></span><span class="num">${o.x.score}/${o.x.total}</span></div>`).join('')}</div>` : ''}
         <div class="actions"><button class="btn sm" data-act="open-test" data-id="${esc(t.id)}">${S.testOpen === t.id ? 'Жасыру' : 'Сұрақтарды көру'}</button><button class="btn sm ghost danger" data-act="del" data-col="tests" data-id="${esc(t.id)}">Өшіру</button></div>
-        ${S.testOpen === t.id ? qs.map((q, qi) => `<div class="q"><b>${qi+1}. ${esc(q.q)}</b>${q.options.map((o, oi) => `<div class="opt ${oi===q.answer?'right':''}">${esc(o)}</div>`).join('')}</div>`).join('') : ''}
+        ${S.testOpen === t.id ? qs.map((q, qi) => qReview(q, qi, undefined)).join('') : ''}
       </article>`;
     }
     const mine = MY().tests?.[t.id];
@@ -901,11 +938,11 @@ function renderTests(){
     const draft = S.testDraft[t.id] || {};
     let body = '';
     if (open){
-      body = `<form data-test="${esc(t.id)}" class="testrun">${qs.map((q, qi) => `<div class="q"><b>${qi+1}. ${esc(q.q)}</b>${q.options.map((o, oi) => `<label class="opt"><input type="radio" name="q${qi}" value="${oi}" ${draft[qi]===oi?'checked':''} required> ${esc(o)}</label>`).join('')}</div>`).join('')}
+      body = `<form data-test="${esc(t.id)}" class="testrun">${qs.map((q, qi) => qRun(q, qi, draft[qi])).join('')}
         <div class="actions" style="margin-top:12px"><button class="btn primary" type="submit">Тапсыру</button><button class="btn ghost" type="button" data-act="open-test" data-id="${esc(t.id)}">Болдырмау</button></div></form>`;
     } else if (mine){
       body = `<div class="mini" style="gap:14px"><span class="score num">${mine.score}/${mine.total}</span><span class="muted">${pct(mine.score, mine.total)}% · ${mine.at ? fmtDT(mine.at) : ''}</span></div>
-        <details><summary class="muted" style="cursor:pointer">Жауаптарымды көру</summary>${qs.map((q, qi) => `<div class="q"><b>${qi+1}. ${esc(q.q)}</b>${q.options.map((o, oi) => `<div class="opt ${oi===q.answer?'right':(mine.answers?.[qi]===oi?'wrong':'')}">${esc(o)}</div>`).join('')}</div>`).join('')}</details>`;
+        <details><summary class="muted" style="cursor:pointer">Жауаптарымды көру</summary>${qs.map((q, qi) => qReview(q, qi, mine.answers?.[qi])).join('')}</details>`;
     }
     return `<article class="card" style="display:flex;flex-direction:column;gap:10px"><div class="thead"><h3>${esc(t.title)}</h3><span class="chip ${mine ? 'ok' : ''}">${mine ? 'Тапсырылды' : qs.length + ' сұрақ'}</span></div>
       ${body}${open ? '' : `<div class="actions"><button class="btn ${mine ? '' : 'primary'} sm" data-act="open-test" data-id="${esc(t.id)}">${mine ? 'Қайта тапсыру' : 'Бастау'}</button></div>`}</article>`;
@@ -1088,7 +1125,7 @@ document.addEventListener('change', async e => {
     return;
   }
   const tf = t.closest('form.testrun');
-  if (tf && t.type === 'radio'){ const id = tf.dataset.test; S.testDraft[id] = S.testDraft[id] || {}; S.testDraft[id][+t.name.slice(1)] = +t.value; }
+  if (tf && /^q\d+/.test(t.name || '')){ const id = tf.dataset.test, tt = S.tests.find(x => x.id === id), qi = parseInt(t.name.slice(1)); if (tt && tt.questions[qi]){ S.testDraft[id] = S.testDraft[id] || {}; S.testDraft[id][qi] = qRead(tf, tt.questions[qi], qi); } }
 });
 
 document.addEventListener('submit', async e => {
@@ -1186,8 +1223,8 @@ document.addEventListener('submit', async e => {
   if (f.classList.contains('testrun')){
     e.preventDefault();
     const id = f.dataset.test; const t = S.tests.find(x => x.id === id); if (!t) return;
-    const answers = t.questions.map((_, qi) => { const c = f.querySelector(`input[name=q${qi}]:checked`); return c ? +c.value : -1; });
-    const score = answers.filter((a, qi) => a === t.questions[qi].answer).length;
+    const answers = t.questions.map((q, qi) => qRead(f, q, qi));
+    const score = answers.filter((a, qi) => qRight(t.questions[qi], a)).length;
     S.testOpen = null; delete S.testDraft[id];
     await writeMy({ tests: { [id]: { score, total: t.questions.length, answers, at: Date.now() } } });
     toast(`Нәтиже: ${score}/${t.questions.length}`);
