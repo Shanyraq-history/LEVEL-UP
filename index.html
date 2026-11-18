@@ -482,6 +482,18 @@ th{font-family:var(--f-body);font-weight:700;color:var(--soft)}
 .novacard .btn{background:var(--surface);border:0;color:var(--accent);box-shadow:0 4px 10px rgba(23,64,78,.08)}
 
 @media (min-width:821px){ .side > a,.side .sub a{width:100%} }
+.focus .fhead{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.focus .fhead h3{margin:0}
+.fpill{font-size:.66rem;color:var(--ok);background:var(--ok-bg);border-radius:30px;padding:5px 10px;font-weight:700}
+.fmain{display:flex;align-items:center;gap:15px;margin-top:14px}
+.ring{--p:0%;height:93px;width:93px;border-radius:50%;background:conic-gradient(var(--prog) 0 var(--p),var(--surface-2) var(--p) 100%);padding:9px;display:grid;place-items:center;flex:0 0 auto}
+.ring-in{width:100%;height:100%;background:var(--surface);border-radius:50%;display:grid;place-items:center}
+.ring strong{font-size:1.25rem;letter-spacing:-.02em;font-weight:700}
+.fcopy{min-width:0}
+.fcopy b{font-size:.84rem}
+.fcopy p{font-size:.74rem;color:var(--muted);line-height:1.5;margin:4px 0 10px}
+.fcopy .btn{background:var(--t1);border:0;color:var(--accent)}
+.fcopy .btn.running{background:var(--ok-bg);color:var(--ok)}
 /* mobile bottom bar */
 .mbar{display:none}
 @media (max-width:1370px){ .layout{grid-template-columns:223px minmax(0,1fr) 264px;gap:16px;padding:18px 18px 60px} .layout.norail{grid-template-columns:223px minmax(0,1fr)} .sidebar{top:18px;height:calc(100vh - 36px)} }
@@ -1392,6 +1404,23 @@ function renderHome(){
     }).join('') || emptyBox('Пән әлі қосылмаған.');
   }
 }
+const FOCUS = 25 * 60;
+S.focus = { left: FOCUS, endAt: 0, timer: null };
+function focusLeft(){ const f = S.focus; return f.endAt ? Math.max(0, Math.round((f.endAt - Date.now()) / 1000)) : f.left; }
+function paintFocus(){
+  const f = S.focus, left = focusLeft(), t = $('#fText'), r = $('#fRing'), b = $('#fBtn');
+  if (f.endAt && left <= 0){ clearInterval(f.timer); f.timer = null; f.endAt = 0; f.left = FOCUS; f.done = true; toast('Фокус сессиясы аяқталды. Сәл демал ☕'); }
+  const l = focusLeft();
+  if (t) t.textContent = `${pad(Math.floor(l / 60))}:${pad(l % 60)}`;
+  if (r) r.style.setProperty('--p', (100 * (FOCUS - l) / FOCUS) + '%');
+  if (b){ b.textContent = f.endAt ? 'Ⅱ Үзіліс' : f.done ? '▶ Қайта бастау' : (l === FOCUS ? '▶ Бастау' : '▶ Жалғастыру'); b.classList.toggle('running', !!f.endAt); }
+}
+function toggleFocus(){
+  const f = S.focus;
+  if (f.endAt){ f.left = focusLeft(); f.endAt = 0; clearInterval(f.timer); f.timer = null; }
+  else { f.done = false; f.endAt = Date.now() + f.left * 1000; f.timer = setInterval(paintFocus, 1000); }
+  paintFocus();
+}
 function renderRail(){
   const rail = $('#rail'), lay = $('#layout'); if (!rail) return;
   const on = S.view === 'plan' && !needsReg() && S.role !== 'anon';
@@ -1409,7 +1438,11 @@ function renderRail(){
       <div class="week">${WL.map(w => `<span class="wl">${w}</span>`).join('')}${days.map(ds => `<button type="button" data-act="goto-day" data-d="${ds}" class="${ds === S.date ? 'sel' : ''} ${ds === t0 ? 'now' : ''} ${dayDone(ds) ? 'done' : ''}" aria-label="${esc(fmtDate(ds))}">${+ds.slice(8)}</button>`).join('')}</div>
       ${up ? `<div class="upc"><span class="ui">📝</span><div><b>${esc(up.title)}</b><small>Дедлайн: ${esc(ymd(new Date(dueOf(up))) === t0 ? 'бүгін, ' + fmtTime(dueOf(up)) : fmtDT(dueOf(up)))}</small></div></div>` : `<div class="upc"><span class="ui">✨</span><div><b>${cur ? 'Алдағы дедлайн жоқ' : 'Барлығы орындалды'}</b><small>Жаңа тапсырма осында шығады</small></div></div>`}
     </section>
+    <section class="rbox focus"><div class="fhead"><h3>Фокус бұрышы 🍵</h3><span class="fpill">Pomodoro</span></div>
+      <div class="fmain"><div class="ring" id="fRing"><div class="ring-in"><strong class="num" id="fText">25:00</strong></div></div>
+      <div class="fcopy"><b>Бір нәрсеге фокус</b><p>25 минут өзіңе арна. Хабарламалар кейін де келеді.</p><button type="button" class="btn sm" id="fBtn" data-act="focus"></button></div></div></section>
     <section class="novacard"><span class="nic">${bot()}</span><h3>NOVA жанында ✨</h3><p>${cur ? 'Сайттың қай бөлімі не үшін екенін түсіндіріп берем.' : 'Қиын тақырып па, әлде мотивация керек пе? Мен әрдайым осындамын.'}</p><button class="btn sm" type="button" data-act="open-nova">NOVA-мен сөйлесу →</button></section>`;
+  paintFocus();
 }
 
 /* ---------- helper panel ---------- */
@@ -1453,6 +1486,7 @@ document.addEventListener('click', async e => {
   if (act === 'today'){ S.date = today(); syncDate(); return; }
   if (act === 'goto-day'){ S.date = b.dataset.d; syncDate(); return; }
   if (act === 'jump-tasks'){ const el = ROLE() === 'curator' ? $('#taskForm') : $('#taskList'); if (el) el.scrollIntoView({ behavior:'smooth', block:'start' }); return; }
+  if (act === 'focus'){ toggleFocus(); return; }
   if (act === 'open-nova'){ const p = $('#hpanel'); p.hidden = false; renderHelper(); return; }
   if (act === 'preview-off'){ setPreview(false); return; }
   if (act === 'add-subj'){ S.addingSubject = true; renderNav(); return; }
