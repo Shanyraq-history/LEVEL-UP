@@ -15,3 +15,8 @@ update public.profiles set role = 'curator' where login = 'сіздің_логи
 
 ## Шығару
 Vercel → Add New → Project → осы репозиторийді Import → Deploy. Framework: Other, баптау қажет емес.
+
+## NOVA AI чат
+- Сервер: `api/nova.js` (Vercel function), Claude API арқылы жауап береді, web search + zetix.kz.
+- Vercel → Settings → Environment Variables: `ANTHROPIC_API_KEY` (міндетті), `NOVA_MODEL` (әдепкі `claude-opus-5-5`), `NOVA_DAILY_LIMIT` (әдепкі 30).
+- Supabase: `supabase/007_nova_usage.sql` бір рет іске қосылуы керек (күндік лимит).
