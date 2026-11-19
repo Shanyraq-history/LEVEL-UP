@@ -2014,15 +2014,15 @@ function renderStudents(){
   document.querySelectorAll('[data-act="stu-tab"]').forEach(b => b.classList.toggle('on', b.dataset.v === (all ? 'all' : 'day')));
   const sd = $('#stuDate'); if (sd) sd.hidden = all;
   const bar = v => `<span class="mini"><span class="bar"><i style="width:${v}%"></i></span><span class="num">${v}%</span></span>`;
-  const row = (s, cells) => `<tr data-act="open-stu" data-id="${esc(s.id)}" class="${S.openStudent===s.id?'open':''}" tabindex="0"><td><b>${esc(s.name)}</b></td><td class="muted">${esc(s.group||'—')}</td>${cells}</tr>`;
+  const row = (s, i, cells) => `<tr data-act="open-stu" data-id="${esc(s.id)}" class="${S.openStudent===s.id?'open':''}" tabindex="0"><td class="num muted">${i + 1}</td><td><b>${esc(s.name)}</b></td><td class="muted">${esc(s.group||'—')}</td><td class="muted">${esc(s.curator||'—')}</td>${cells}</tr>`;
   el.innerHTML = all
-    ? `<div class="tablewrap"><table><thead><tr><th>Оқушы</th><th>Поток</th><th>Тапсырмалар</th><th>Дәлел</th><th>Чек-лист</th><th>Тест</th></tr></thead><tbody>
-    ${studs.map(s => { const x = studentStats(s); return row(s, `<td>${bar(pct(x.allDone, x.all.length))}</td><td>${bar(pct(x.allProof, x.all.length))}</td><td class="num">${x.cl}%</td><td class="num">${x.testAvg===null?'—':x.testAvg+'%'}</td>`); }).join('')}
+    ? `<div class="tablewrap"><table><thead><tr><th>№</th><th>Оқушы</th><th>Поток</th><th>Куратор</th><th>Тапсырмалар</th><th>Дәлел</th><th>Чек-лист</th><th>Тест</th></tr></thead><tbody>
+    ${studs.map((s, i) => { const x = studentStats(s); return row(s, i, `<td>${bar(pct(x.allDone, x.all.length))}</td><td>${bar(pct(x.allProof, x.all.length))}</td><td class="num">${x.cl}%</td><td class="num">${x.testAvg===null?'—':x.testAvg+'%'}</td>`); }).join('')}
   </tbody></table></div>`
-    : `<div class="tablewrap"><table><thead><tr><th>Оқушы</th><th>Поток</th><th>Орындалды · ${esc(fmtDate(S.date))}</th><th>Дәлел</th></tr></thead><tbody>
-    ${studs.map(s => { const x = studentStats(s), n = x.dayTasks.length; if (!n) return row(s, '<td class="muted">—</td><td class="muted">—</td>');
+    : `<div class="tablewrap"><table><thead><tr><th>№</th><th>Оқушы</th><th>Поток</th><th>Куратор</th><th>Орындалды · ${esc(fmtDate(S.date))}</th><th>Дәлел</th></tr></thead><tbody>
+    ${studs.map((s, i) => { const x = studentStats(s), n = x.dayTasks.length; if (!n) return row(s, i, '<td class="muted">—</td><td class="muted">—</td>');
       const v = pct(x.dayDone, n), cls = x.dayDone === n ? 'ok' : (S.date < today() ? 'bad' : '');
-      return row(s, `<td><span class="mini"><span class="bar"><i style="width:${v}%"></i></span><span class="chip ${cls}">${v}%</span><span class="num muted">${x.dayDone}/${n}</span></span></td><td><span class="chip ${x.dayProof === n ? 'ok' : ''} num">${x.dayProof}/${n}</span></td>`); }).join('')}
+      return row(s, i, `<td><span class="mini"><span class="bar"><i style="width:${v}%"></i></span><span class="chip ${cls}">${v}%</span><span class="num muted">${x.dayDone}/${n}</span></span></td><td><span class="chip ${x.dayProof === n ? 'ok' : ''} num">${x.dayProof}/${n}</span></td>`); }).join('')}
   </tbody></table></div>`;
   const d = $('#stuDetail'); const s = S.students[S.openStudent];
   if (!s){ d.innerHTML = ''; return; }
