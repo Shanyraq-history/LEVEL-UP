@@ -1093,7 +1093,7 @@ async function loadAll(){
   S.tests = tests.map(t => ({ id:t.id, subject:t.subject, section:t.section || '', title:t.title, questions:t.questions || [], createdAt:msOf(t.created_at) }));
   if (S.role === 'curator'){
     const [profs, prog] = await Promise.all([q(sb.from('profiles').select('*').eq('role', 'student')), q(sb.from('progress').select('*'))]);
-    S.students = Object.fromEntries(profs.map(p => [p.id, { id:p.id, name:p.full_name || p.login, group:p.grp, login:p.login, joinedAt:msOf(p.created_at) }]));
+    S.students = Object.fromEntries(profs.map(p => [p.id, { id:p.id, name:p.full_name || p.login, group:p.grp, curator:p.curator || '', login:p.login, joinedAt:msOf(p.created_at) }]));
     S.progress = Object.fromEntries(prog.map(p => [p.user_id, p.data || {}]));
   } else {
     const rows = await q(sb.from('progress').select('*').eq('user_id', S.uid));
@@ -1144,7 +1144,8 @@ function renderAuth(){
     <h2>${reg ? 'Сәлем! Мен — NOVA. Сайтқа тіркеле ғой.' : 'Сәлем! Қайта келгеніңе қуаныштымын.'}</h2>
     <div class="authtabs" role="tablist"><button type="button" data-auth="login" class="${reg ? '' : 'on'}">Кіру</button><button type="button" data-auth="register" class="${reg ? 'on' : ''}">Тіркелу</button></div>
     ${reg ? `<div class="row2"><label class="f">Тегі<input id="aLast" required maxlength="40" autocomplete="family-name"></label><label class="f">Аты<input id="aFirst" required maxlength="40" autocomplete="given-name"></label></div>
-    <label class="f">Поток<input id="aGroup" maxlength="40" placeholder="Мысалы: 01, 11"></label>` : ''}
+    <label class="f">Поток<input id="aGroup" maxlength="40" placeholder="Мысалы: 01, 11"></label>
+    <label class="f">Кураторыңның аты-жөні<input id="aCurator" required maxlength="80" placeholder="Мысалы: Есімова Айгерім"></label>` : ''}
     <label class="f">Логин<input id="aLogin" required autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="мысалы: ayau_juz40"></label>
     <label class="f">Пароль<input id="aPass" type="password" required minlength="6" autocomplete="${reg ? 'new-password' : 'current-password'}"></label>
     ${reg ? '<p style="font-size:.82rem">Логин: латын әріптері, сандар, астын сызу (_), нүкте немесе сызықша (3–32 таңба). Пароль кемінде 6 таңба. Оларды ұмытпа!</p>' : ''}
@@ -1332,6 +1333,7 @@ async function startSession(session){
   S.role = prof.role === 'curator' ? 'curator' : 'student';
   S.me = { name: prof.full_name || prof.login, group: prof.grp, first: (session.user.user_metadata || {}).first_name || '' }; S.meLoaded = true;
   const um = session.user.user_metadata || {};
+  S.um = um;
   S.myName = um.first_name || firstName(prof.full_name || prof.login);
   setAuthView(false); afterRole();
   try { await loadAll(); } catch (e){ console.warn(e); toast('Деректер жүктелмеді. Бетті жаңартып көр.'); }
@@ -1393,6 +1395,7 @@ function route(){
   if (m){ S.view = 'subject'; S.subject = m[1]; S.tab = m[2]; }
   else if (h === 'students'){ S.view = 'students'; }
   else if (h === 'mistakes'){ S.view = 'mistakes'; }
+  else if (h === 'settings'){ S.view = 'settings'; }
   else { S.view = 'plan'; }
   S.testOpen = null;
 }
@@ -1420,6 +1423,7 @@ const ICONS = {
   chart:'<path d="M3 3v18h18M7 17v-6M12 17V7M17 17V4"/>',
   bot:'<rect x="3" y="7" width="18" height="14" rx="5"/><path d="M12 3v4M9 3h6M8 13h.01M16 13h.01M9 17c1.5 1.3 4.5 1.3 6 0"/>',
   clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  gear:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
   redo:'<path d="M4 12a8 8 0 1 0 2.3-5.6M4 4v4.5h4.5"/><path d="M9.5 12.5l2 2 3.5-4"/>',
 };
 const ico = k => `<svg class="ni" viewBox="0 0 24 24" aria-hidden="true">${ICONS[k] || ICONS.book}</svg>`;
@@ -1429,6 +1433,7 @@ function renderNav(){
   const badge = n => n ? `<span class="badge num">${n}</span>` : '';
   let h = `<p class="navh">Шолу</p><a href="#plan" ${S.view==='plan' ? 'aria-current="page"' : ''}>${ico('home')}<span class="nl">Басты бет</span>${badge(left)}</a>`;
   if (r !== 'curator') h += `<a href="#mistakes" ${S.view==='mistakes' ? 'aria-current="page"' : ''}>${ico('redo')}<span class="nl">Қатемен жұмыс</span>${badge(Object.keys(MY().mistakes || {}).length)}</a>`;
+  h += `<a href="#settings" ${S.view==='settings' ? 'aria-current="page"' : ''}>${ico('gear')}<span class="nl">Баптаулар</span></a>`;
   h += `<p class="navh">Пәндер</p>`;
   const subs = subjects();
   subs.forEach(s => {
@@ -1450,6 +1455,27 @@ function renderNav(){
     + (r === 'curator' ? `<a href="#students" class="${S.view==='students'?'on':''}">${ico('users')}Оқушылар</a>` : `<a href="#mistakes" class="${S.view==='mistakes'?'on':''}">${ico('redo')}Қателер</a>`)
     + `<button type="button" data-act="open-nova">${ico('bot')}NOVA</button>`;
   if (S.addingSubject){ const i = $('#subjName'); if (i) i.focus(); }
+}
+
+/* ---------- settings ---------- */
+function renderSettings(){
+  const p = S.profile || {}, um = S.um || {}, cur = S.role === 'curator' && !S.preview;
+  const parts = String(p.full_name || '').trim().split(/\s+/);
+  const last = um.last_name || parts[0] || '', first = um.first_name || parts.slice(1).join(' ') || '';
+  const curator = p.curator || um.curator || '';
+  return `<section class="vhead"><div><p class="eyebrow">Шолу</p><h1>Баптаулар</h1><p class="lead">Тіркелу кезінде енгізген деректеріңді осында көріп, өзгерте аласың.</p></div></section>
+    <form class="card composer" id="setForm" novalidate style="max-width:560px">
+      <h2>Профиль</h2>
+      <div class="row2"><label class="f">Тегі<input id="stLast" required maxlength="40" autocomplete="family-name" value="${esc(last)}"></label><label class="f">Аты<input id="stFirst" required maxlength="40" autocomplete="given-name" value="${esc(first)}"></label></div>
+      <label class="f">Поток<input id="stGroup" maxlength="40" placeholder="Мысалы: 01, 11" value="${esc(p.grp || '')}"></label>
+      ${cur ? '' : `<label class="f">Кураторың<input id="stCurator" maxlength="80" placeholder="Кураторыңның аты-жөні" value="${esc(curator)}"></label>`}
+      <label class="f">Логин<input value="${esc(p.login || '')}" disabled></label>
+      <h2 style="margin-top:6px">Парольді өзгерту</h2>
+      <p class="muted" style="font-size:.82rem;margin:0">Өзгерткің келмесе, бос қалдыр.</p>
+      <div class="row2"><label class="f">Жаңа пароль<input id="stPass" type="password" minlength="6" autocomplete="new-password"></label><label class="f">Қайталау<input id="stPass2" type="password" minlength="6" autocomplete="new-password"></label></div>
+      <p class="err" id="setErr" hidden></p>
+      <div class="actions"><button class="btn primary" id="setBtn">Сақтау</button></div>
+    </form>`;
 }
 
 /* ---------- shell ---------- */
@@ -1530,6 +1556,8 @@ ${taskFields('Мысалы: Тарих, 5-тақырыпты қайталау')}
         <div class="actions"><button class="btn" type="button" data-act="add-q">+ Сұрақ қосу</button><button class="btn primary" type="submit" style="margin-left:auto">Тестті жариялау</button></div></form>`;
       html += `<div id="testList" class="list"></div>`;
     }
+  } else if (v === 'settings'){
+    html += renderSettings();
   } else if (v === 'mistakes'){
     html += `<section class="vhead"><div><p class="eyebrow">Шолу</p><h1>Қатемен жұмыс</h1><p class="lead">Барлық тесттерде қате жауап берген сұрақтарың осында жиналады. Қайта өтіп, дұрыс жауап берсең, сұрақ тізімнен өзі шығады.</p></div></section><div id="mistBox"></div>`;
   } else if (v === 'students'){
@@ -2001,7 +2029,7 @@ function renderStudents(){
   const x = studentStats(s);
   const recent = [...S.tasks].filter(t => t.date <= today()).sort((a,b) => b.date.localeCompare(a.date) || (b.publishedAt||0)-(a.publishedAt||0)).slice(0, 30);
   d.innerHTML = `<article class="card" style="display:flex;flex-direction:column;gap:14px">
-    <div class="thead"><div><p class="eyebrow">Оқушы картасы</p><h2>${esc(s.name)}</h2><p class="muted">${esc(s.group||'')}${s.joinedAt ? ' · тіркелді ' + fmtDT(s.joinedAt) : ''}</p></div><div class="actions"><button class="btn sm ghost danger" data-act="del-stu" data-id="${esc(s.id)}">Оқушыны өшіру</button><button class="btn sm ghost" data-act="open-stu" data-id="${esc(s.id)}">Жабу</button></div></div>
+    <div class="thead"><div><p class="eyebrow">Оқушы картасы</p><h2>${esc(s.name)}</h2><p class="muted">${esc(s.group||'')}${s.curator ? ' · куратор: ' + esc(s.curator) : ''}${s.joinedAt ? ' · тіркелді ' + fmtDT(s.joinedAt) : ''}</p></div><div class="actions"><button class="btn sm ghost danger" data-act="del-stu" data-id="${esc(s.id)}">Оқушыны өшіру</button><button class="btn sm ghost" data-act="open-stu" data-id="${esc(s.id)}">Жабу</button></div></div>
     <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr))">
       <div><p class="eyebrow">Тапсырмалар</p><p class="score num">${x.allDone}/${x.all.length}</p></div>
       <div><p class="eyebrow">Чек-листтер</p><p class="score num">${x.cl}%</p></div>
@@ -2330,17 +2358,52 @@ document.addEventListener('submit', async e => {
     if (pass.length < 6) return authErr('Пароль кемінде 6 таңба болуы керек.');
     let name = '';
     let first = '', last = '';
-    if (reg){ last = $('#aLast').value.trim(); first = $('#aFirst').value.trim(); if (!last) return authErr('Тегіңді жаз.'); if (!first) return authErr('Атыңды жаз.'); name = `${last} ${first}`; }
+    if (reg){ last = $('#aLast').value.trim(); first = $('#aFirst').value.trim(); if (!last) return authErr('Тегіңді жаз.'); if (!first) return authErr('Атыңды жаз.'); name = `${last} ${first}`; if (!$('#aCurator').value.trim()) return authErr('Кураторыңның аты-жөнін жаз.'); }
     const btn = $('#aBtn'); btn.disabled = true; btn.textContent = 'Күте тұр…'; $('#aErr').hidden = true;
     try {
       let res;
-      if (reg) res = await sb.auth.signUp({ email: loginEmail(login), password: pass, options: { data: { login, full_name: name, first_name: first, last_name: last, grp: $('#aGroup').value.trim() } } });
+      if (reg) res = await sb.auth.signUp({ email: loginEmail(login), password: pass, options: { data: { login, full_name: name, first_name: first, last_name: last, grp: $('#aGroup').value.trim(), curator: $('#aCurator').value.trim() } } });
       else res = await sb.auth.signInWithPassword({ email: loginEmail(login), password: pass });
       if (res.error) throw res.error;
       if (!res.data.session) throw new Error('confirm');
       await startSession(res.data.session);
       if (reg) toast(`Танысқаныма қуаныштымын, ${first}!`);
     } catch (err){ authErr(authMsg(err)); }
+    return;
+  }
+  if (f.id === 'setForm'){
+    e.preventDefault();
+    const err = m => { const el = $('#setErr'); el.textContent = m; el.hidden = !m; };
+    const last = $('#stLast').value.trim(), first = $('#stFirst').value.trim(), grp = $('#stGroup').value.trim();
+    const cur = $('#stCurator') ? $('#stCurator').value.trim() : '';
+    const pass = $('#stPass').value, pass2 = $('#stPass2').value;
+    if (!last) return err('Тегіңді жаз.');
+    if (!first) return err('Атыңды жаз.');
+    if (pass && pass.length < 6) return err('Жаңа пароль кемінде 6 таңба болуы керек.');
+    if (pass !== pass2) return err('Парольдер сәйкес емес.');
+    err('');
+    const btn = $('#setBtn'); btn.disabled = true; btn.textContent = 'Сақталуда…';
+    try {
+      const full_name = `${last} ${first}`;
+      const upd = { full_name, grp };
+      if ($('#stCurator')) upd.curator = cur;
+      const r = await sb.from('profiles').update(upd).eq('id', S.uid);
+      if (r.error) throw r.error;
+      const data = { full_name, first_name: first, last_name: last, grp };
+      if ($('#stCurator')) data.curator = cur;
+      const u = await sb.auth.updateUser(pass ? { data, password: pass } : { data });
+      if (u.error) throw u.error;
+      S.um = { ...(S.um || {}), ...data };
+      Object.assign(S.profile, upd);
+      S.me = { ...S.me, name: full_name, group: grp, first };
+      S.myName = first;
+      renderGreet(); renderShell();
+      toast(pass ? 'Сақталды. Пароль де жаңартылды.' : 'Сақталды');
+    } catch (e2){
+      btn.disabled = false; btn.textContent = 'Сақтау';
+      const m = String((e2 && e2.message) || '');
+      err(/curator/i.test(m) ? 'Деректер базасы әлі жаңартылмаған: куратор Supabase-те 013 SQL файлын іске қосуы керек.' : authMsg(e2));
+    }
     return;
   }
   if (f.id === 'secForm'){
