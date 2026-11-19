@@ -6,6 +6,7 @@
 <title>LEVEL UP</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="config.js"></script>
+<script src="info-terms.js"></script>
 <script>try{var t=localStorage.getItem("levelup-theme");if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
 <link rel="preload" href="fonts/juz40-regular.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/juz40-medium.woff2" as="font" type="font/woff2" crossorigin>
@@ -711,6 +712,38 @@ body.authmode .authwrap{min-height:calc(100vh - 160px);padding:0}
 .authcard .actions .btn.primary{padding:14px 34px;font-size:1.08rem;min-width:160px}
 @media (max-width:560px){ .authcard.reg{padding:26px 20px;gap:18px} .authcard.reg>svg{width:120px;height:138px;justify-self:center} .authcard h2{font-size:1.35rem} .authcard .actions .btn.primary{width:100%} }
 @media (max-width:820px){ body.authmode #auth{order:2;align-self:stretch;width:100%;min-height:0;place-items:start center} body.authmode .authcard{width:100%;max-width:640px;box-sizing:border-box} body.authmode .top{align-self:stretch} }
+/* терминология + флеш-карталар */
+.terms{display:flex;flex-direction:column;gap:18px}
+.fc{display:flex;flex-direction:column;gap:12px}
+.fc h2,.tl-head h2{margin:0;font-size:1.15rem}
+.fc-ctl{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.fc-ctl select{padding:6px 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);font-size:.85rem;max-width:100%}
+.fc-ctl .btn.on{border-color:var(--accent);color:var(--accent)}
+.fc-stage{perspective:1400px}
+.fc-card{position:relative;display:block;width:100%;min-height:230px;border:0;padding:0;background:none;cursor:pointer;color:inherit;font:inherit;text-align:center;transform-style:preserve-3d;transition:transform .45s ease}
+.fc-card.flip{transform:rotateY(180deg)}
+.fc-face{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:22px 20px;border-radius:var(--r);border:1px solid var(--line);background:var(--surface-2);backface-visibility:hidden;-webkit-backface-visibility:hidden;overflow:auto}
+.fc-face.back{transform:rotateY(180deg);background:color-mix(in srgb,var(--accent) 9%,var(--surface))}
+.fc-face .big{font-family:var(--f-display);font-size:clamp(1.35rem,4.2vw,2rem);font-weight:700;line-height:1.2}
+.fc-face .def{font-size:1.02rem;line-height:1.5;max-width:60ch}
+.fc-face .ex{font-family:var(--f-mono);font-size:.85rem;color:var(--accent)}
+.fc-face .hint{position:absolute;bottom:10px;left:0;right:0;font-size:.75rem;color:var(--muted)}
+.fc-face .ok{position:absolute;top:10px;right:12px}
+.fc-nav{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.fc-nav .btn{min-width:44px}
+.fc-done{border:1px dashed var(--line);border-radius:var(--r);padding:28px 18px;text-align:center;color:var(--muted)}
+.tl-head{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.tl-head input{max-width:280px}
+.tl-blk{display:flex;flex-direction:column;gap:8px}
+.tl-blk h3{margin:6px 0 0;font-size:.98rem;display:flex;gap:8px;align-items:baseline}
+.tl-blk h3 .num{color:var(--accent);font-size:.8rem}
+.term{display:grid;grid-template-columns:34px 1fr;gap:4px 10px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.term .n{font-family:var(--f-mono);font-size:.78rem;color:var(--muted);padding-top:2px}
+.term b{font-weight:700}
+.term .known{color:var(--accent);font-size:.8rem;margin-left:6px}
+.term p{grid-column:2;margin:0;color:var(--muted);line-height:1.45}
+.term code{grid-column:2;font-family:var(--f-mono);font-size:.82rem;color:var(--accent);white-space:normal}
+@media (max-width:520px){ .tl-head input{max-width:none} .fc-card{min-height:260px} }
 </style>
 </head>
 <body>
@@ -831,6 +864,7 @@ const KINDS = {
   mat:{ name:'Материалдар (PDF, файл, сілтеме)', lead:'Материалдар: PDF, файлдар және сілтемелер.', ph:'Мысалы: 1-тарау' },
   check:{ name:'Чек-лист', lead:'Қадамдық тізімдер: әр пунктті орындаған сайын белгі қой.' },
   test:{ name:'Тест', lead:'Білімді тексеру. Нәтиже бірден шығады және куратор оны көреді.' },
+  terms:{ name:'Терминология (84 термин, флеш-карталар)', lead:'Информатика бойынша 84 термин: алдымен флеш-карталармен жатта, төменде толық тізім.' },
 };
 const kindOf = t => t.mat ? 'mat' : (t.id === 'checklists' ? 'check' : 'test');
 const DEF_SECS = TABS.map(t => ({ id:t.id, name:t.name, kind:kindOf(t) }));
@@ -851,6 +885,7 @@ const TIPS = {
     books:'Кітапты ашып оқы. Жоспарда кітапқа сілтеме болса, сол тарауды оқып шық.',
     practicum:'Практикумды орындап, нәтижесін жоспардағы тапсырмаға дәлел ретінде жүкте.',
     tests:'Тестті «Бастау» батырмасымен аш, жауаптарды белгілеп «Тапсыру» бас. Нәтижеңді куратор көреді.',
+    terms:'Картаны басып аудар. Білсең «Білемін», білмесең «Қайталау» бас. «Қайталау керек» сүзгісімен тек білмейтін терминдерді қайтала.',
   },
   curator: {
     plan:'Тапсырманы жазып «Жариялау» бас, сол сәтте оны барлық оқушы көреді. Әлі дайын емес болса, «Жоба ретінде сақтау» бас: жобаны оқушылар көрмейді.',
@@ -860,6 +895,7 @@ const TIPS = {
     practicum:'Практикалық жұмыстың шартын жаз. Оқушылар нәтижені жоспар арқылы тапсырады.',
     tests:'Тест құрастыру: сұрақ, 4 нұсқа және дұрыс жауапты белгіле. Нәтижелер әр тесттің астында шығады.',
     students:'Оқушыны басып, оның барлық мәліметін аш: күндік тапсырмалар, дәлелдер, чек-листтер, тесттер.',
+    terms:'Терминология бөлімі дайын: 84 термин мен флеш-карталар. Оқушыларға жоспарда осы бөлімге сілтеме беруге болады.',
   }
 };
 
@@ -1279,6 +1315,7 @@ function tabCount(sid, tab){
   const sc = secs(sid).find(x => x.id === tab); if (!sc) return '';
   if (sc.kind === 'mat') return S.materials.filter(m => m.subject === sid && m.section === tab).length;
   if (sc.kind === 'check') return S.checklists.filter(c => c.subject === sid && (c.section || 'checklists') === tab).length;
+  if (sc.kind === 'terms') return TERMS().terms.length;
   return S.tests.filter(c => c.subject === sid && (c.section || 'tests') === tab).length;
 }
 const ICONS = {
@@ -1396,6 +1433,8 @@ ${taskFields('Мысалы: Тарих, 5-тақырыпты қайталау')}
         <label class="f">Пункттер (әрқайсысы жаңа жолдан; PDF тіркесеңіз, бос қалдыруға болады)<textarea id="cItems" placeholder="Формулаларды жаттау\n10 есеп шығару\nҚателерді талдау"></textarea></label>
         <div class="actions"><label class="btn upload">PDF / файлдар тіркеу<input type="file" id="cFile" multiple accept=".pdf,application/pdf,image/*,.doc,.docx"></label><span id="cFileName" class="muted" style="font-size:.85rem"></span><button class="btn primary" type="submit" style="margin-left:auto">Жариялау</button></div></form>`;
       html += `<div id="clList" class="grid"></div>`;
+    } else if (tb.kind === 'terms'){
+      html += `<div id="termsBox" class="terms"></div>`;
     } else {
       if (r === 'curator') html += `<form class="card composer" id="testForm">
         <h2>${esc(tb.name)}: жаңа тест</h2>
@@ -1465,6 +1504,7 @@ function renderData(){
     if (!cs){ const n = $('#noSec'); if (n) n.innerHTML = emptyBox(ROLE() === 'curator' ? 'Бұл пәнде бөлім жоқ. «+ Бөлім қосу» батырмасымен бөлім ашыңыз.' : 'Куратор бұл пәнге әлі бөлім қоспады.'); }
     else if (cs.kind === 'mat') renderMaterials();
     else if (cs.kind === 'check') renderChecklists();
+    else if (cs.kind === 'terms') renderTerms();
     else renderTests();
   }
   else if (v === 'students') renderStudents();
@@ -1704,6 +1744,92 @@ function checkQ(f, id, qi){
   const st = f.querySelector('[data-stat]'); if (st) st.innerHTML = runStat(id);
   noteMistake(it, qRight(it.q, a));
 }
+/* ---------- терминология: тізім + флеш-карталар ---------- */
+const TERMS = () => window.INFO_TERMS || { blocks:[], terms:[] };
+const fcKey = () => `levelup-terms-${S.uid || 'anon'}`;
+function fcKnown(){ if (!S.fcKnown || S.fcKnown.key !== fcKey()){ let a = []; try { a = JSON.parse(localStorage.getItem(fcKey()) || '[]') || []; } catch {} S.fcKnown = { key: fcKey(), set: new Set(Array.isArray(a) ? a : []) }; } return S.fcKnown.set; }
+function fcSave(){ try { localStorage.setItem(fcKey(), JSON.stringify([...fcKnown()])); } catch {} }
+function fcState(){ if (!S.fc) S.fc = { blk:'all', i:0, flip:false, rev:false, mix:false, order:null, q:'' }; return S.fc; }
+function fcBuild(){
+  const f = fcState(), known = fcKnown();
+  let ids = TERMS().terms.filter(t => f.blk === 'all' ? true : f.blk === 'learn' ? !known.has(t.id) : t.b === f.blk).map(t => t.id);
+  if (f.mix) for (let i = ids.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [ids[i], ids[j]] = [ids[j], ids[i]]; }
+  f.order = ids; f.i = 0; f.flip = false;
+}
+function renderTerms(){
+  const box = $('#termsBox'); if (!box) return;
+  const f = fcState(), D = TERMS();
+  if (!f.order) fcBuild();
+  if (!$('#fcBox', box)){
+    box.innerHTML = `<section class="card fc" id="fcBox" aria-label="Флеш-карталар"></section>
+      <section class="card" style="display:flex;flex-direction:column;gap:12px"><div class="tl-head"><h2>Барлық терминдер · ${D.terms.length}</h2><input class="t" id="termQ" type="search" placeholder="Терминді іздеу…" aria-label="Терминді іздеу" value="${esc(f.q)}"></div><div id="termList" class="list"></div></section>`;
+  }
+  renderFc(); renderTermList();
+}
+function renderFc(){
+  const el = $('#fcBox'); if (!el) return;
+  const f = fcState(), D = TERMS(), known = fcKnown(), total = D.terms.length;
+  const nk = D.terms.filter(t => known.has(t.id)).length;
+  const blkName = id => (D.blocks.find(b => b.id === id) || {}).name || '';
+  const opts = [['all', `Барлық терминдер (${total})`], ...D.blocks.map((b, i) => [b.id, `${String(i + 1).padStart(2, '0')} · ${b.name} (${D.terms.filter(t => t.b === b.id).length})`]), ['learn', `Қайталау керек (${total - nk})`]];
+  const t = D.terms.find(x => x.id === f.order[f.i]);
+  const front = t && (f.rev ? `<span class="def">${esc(t.d)}</span>` : `<span class="big">${esc(t.t)}</span>`);
+  const back = t && (f.rev ? `<span class="big">${esc(t.t)}</span>${t.ex ? `<span class="ex">${esc(t.ex)}</span>` : ''}` : `<span class="def">${esc(t.d)}</span>${t.ex ? `<span class="ex">${esc(t.ex)}</span>` : ''}`);
+  el.innerHTML = `<div class="thead"><h2>Флеш-карталармен жаттау</h2><span class="num muted">Меңгерілді: ${nk}/${total}</span></div>
+    <div class="bar"><i style="width:${pct(nk, total)}%"></i></div>
+    <div class="fc-ctl"><select id="fcBlk" aria-label="Блокты таңдау">${opts.map(([v, n]) => `<option value="${v}" ${f.blk === v ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>
+      <button class="btn sm ${f.mix ? 'on' : ''}" data-act="fc-mix" aria-pressed="${f.mix}">Араластыру</button>
+      <button class="btn sm ${f.rev ? 'on' : ''}" data-act="fc-rev" aria-pressed="${f.rev}">${f.rev ? 'Анықтама → термин' : 'Термин → анықтама'}</button>
+      ${nk ? `<button class="btn sm ghost" data-act="fc-reset">Прогресті тазалау</button>` : ''}</div>
+    ${t ? `<div class="fc-stage"><button type="button" class="fc-card ${f.flip ? 'flip' : ''}" data-act="fc-flip" aria-label="Картаны аудару">
+        <span class="fc-face front"><span class="eyebrow">${esc(blkName(t.b))} · ${f.i + 1}/${f.order.length}</span>${front}${known.has(t.id) ? '<span class="chip ok">Білемін ✓</span>' : ''}<span class="hint">Басып аудар</span></span>
+        <span class="fc-face back"><span class="eyebrow">${f.rev ? 'Термин' : esc(t.t)}</span>${back}<span class="hint">Басып аудар</span></span></button></div>
+      <div class="fc-nav"><button class="btn" data-act="fc-go" data-d="-1" aria-label="Алдыңғы">‹</button><button class="btn" data-act="fc-mark" data-v="0">Қайталау керек</button><button class="btn primary" data-act="fc-mark" data-v="1">Білемін ✓</button><button class="btn" data-act="fc-go" data-d="1" aria-label="Келесі">›</button></div>
+      <p class="muted" style="margin:0;font-size:.78rem;text-align:center">Пернетақта: бос орын — аудару, ← → — ауысу.</p>`
+    : `<div class="fc-done">${f.blk === 'learn' ? 'Барлық терминді меңгердің! 🎉 Басқа блокты таңдап қайталай бер.' : 'Бұл блокта термин жоқ.'}</div>`}`;
+}
+function renderTermList(){
+  const el = $('#termList'); if (!el) return;
+  const f = fcState(), D = TERMS(), known = fcKnown();
+  const qq = f.q.trim().toLowerCase();
+  const hit = t => !qq || t.t.toLowerCase().includes(qq) || t.d.toLowerCase().includes(qq);
+  const sorted = [...D.terms].sort((a, b) => a.t.localeCompare(b.t, 'kk'));
+  const html = D.blocks.map((b, i) => {
+    const ts = sorted.filter(t => t.b === b.id && hit(t)); if (!ts.length) return '';
+    return `<div class="tl-blk"><h3><span class="num">${String(i + 1).padStart(2, '0')}</span>${esc(b.name)} <span class="muted num" style="font-size:.8rem">${ts.length}</span></h3>${ts.map((t, j) => `<div class="term"><span class="n">${j + 1}</span><div><b>${esc(t.t)}</b>${known.has(t.id) ? '<span class="known">✓ меңгерілді</span>' : ''}</div><p>${esc(t.d)}</p>${t.ex ? `<code>${esc(t.ex)}</code>` : ''}</div>`).join('')}</div>`;
+  }).join('');
+  el.innerHTML = html || `<div class="empty"><p>«${esc(f.q)}» бойынша термин табылмады.</p></div>`;
+}
+function fcGo(d){ const f = fcState(); if (!f.order.length) return; f.i = (f.i + d + f.order.length) % f.order.length; f.flip = false; renderFc(); }
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-act^="fc-"]'); if (!b) return;
+  const f = fcState(), act = b.dataset.act;
+  if (act === 'fc-flip'){ f.flip = !f.flip; const c = $('.fc-card'); if (c) c.classList.toggle('flip', f.flip); return; }
+  if (act === 'fc-go'){ fcGo(+b.dataset.d); return; }
+  if (act === 'fc-mark'){
+    const id = f.order[f.i]; if (id == null) return;
+    const k = fcKnown(); b.dataset.v === '1' ? k.add(id) : k.delete(id); fcSave();
+    if (f.blk === 'learn' && b.dataset.v === '1'){ f.order.splice(f.i, 1); if (f.i >= f.order.length) f.i = 0; f.flip = false; renderFc(); }
+    else fcGo(1);
+    renderTermList(); return;
+  }
+  if (act === 'fc-mix'){ f.mix = !f.mix; fcBuild(); renderFc(); return; }
+  if (act === 'fc-rev'){ f.rev = !f.rev; f.flip = false; renderFc(); return; }
+  if (act === 'fc-reset'){
+    if (!b.dataset.armed){ b.dataset.armed = '1'; b.textContent = 'Растайсың ба?'; setTimeout(() => { if (b.isConnected){ delete b.dataset.armed; b.textContent = 'Прогресті тазалау'; } }, 3500); return; }
+    fcKnown().clear(); fcSave(); fcBuild(); renderFc(); renderTermList(); return;
+  }
+});
+document.addEventListener('change', e => { if (e.target.id === 'fcBlk'){ fcState().blk = e.target.value; fcBuild(); renderFc(); } });
+document.addEventListener('input', e => { if (e.target.id === 'termQ'){ fcState().q = e.target.value; renderTermList(); } });
+document.addEventListener('keydown', e => {
+  if (!$('#fcBox') || !$('.fc-card') || e.target.closest('input,textarea,select,[contenteditable]') || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (!$('#hpanel').hidden && e.target.closest('#hpanel')) return;
+  if (e.key === ' ' || e.key === 'Enter'){ if (e.target.closest('button,a')) return; e.preventDefault(); $('.fc-card').click(); }
+  else if (e.key === 'ArrowRight'){ e.preventDefault(); fcGo(1); }
+  else if (e.key === 'ArrowLeft'){ e.preventDefault(); fcGo(-1); }
+});
+
 function renderMistakes(){
   const el = $('#mistBox'); if (!el) return;
   if (S.mistRun){ el.innerHTML = runForm('__mist', 'Аяқтау'); return; }
@@ -1944,7 +2070,7 @@ function renderRail(){
 function renderHelper(){
   const r = S.role === 'curator' && !S.preview ? 'curator' : 'student';
   const cs0 = S.view === 'subject' ? curSec() : null;
-  const key = S.view === 'subject' ? (cs0 ? (TAB[cs0.id] ? cs0.id : ({ mat:'books', check:'checklists', test:'tests' })[cs0.kind]) : 'books') : S.view;
+  const key = S.view === 'subject' ? (cs0 ? (TAB[cs0.id] ? cs0.id : ({ mat:'books', check:'checklists', test:'tests', terms:'terms' })[cs0.kind]) : 'books') : S.view;
   const tip = TIPS[r][key] || TIPS[r].plan;
   const where = S.view === 'subject' ? `${subjName(S.subject) || 'Пән'} · ${cs0 ? cs0.name : ''}` : (S.view === 'students' ? 'Оқушылар' : 'Күндік жоспар');
   const msgs = $('#hmsgs');
@@ -1996,7 +2122,7 @@ document.addEventListener('click', async e => {
     const list = secs(S.subject).filter(x => x.id !== cs.id);
     const tbl = cs.kind === 'mat' ? 'materials' : (cs.kind === 'check' ? 'checklists' : 'tests');
     await cur(async () => {
-      await q(sb.from(tbl).delete().eq('subject', S.subject).eq('section', cs.id));
+      if (cs.kind !== 'terms') await q(sb.from(tbl).delete().eq('subject', S.subject).eq('section', cs.id));
       if (cs.kind !== 'mat' && cs.id === secDef(cs.kind)) await q(sb.from(tbl).delete().eq('subject', S.subject).is('section', null));
       await q(sb.from('subjects').update({ sections: list.map(({ id, name, kind }) => ({ id, name, kind })) }).eq('id', S.subject));
     }, 'Бөлім өшірілді');
